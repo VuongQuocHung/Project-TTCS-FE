@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Header } from "./components/header/Header";
+import { Footer } from "./components/footer/Footer";
 import "./globals.css";
 
 
 export const metadata: Metadata = {
   title: " Project TTCS",
-  description: "Project 3: Xây dựng website bán laptop và phụ kiện",
+  description: "Project TTCS: Xây dựng website bán laptop",
 };
 
 export default function RootLayout({
@@ -16,7 +17,9 @@ export default function RootLayout({
   return (
     <html lang="vi" suppressHydrationWarning>
       <body>
+        <Header />
         {children}
+        <Footer />
       </body>
     </html>
   );
