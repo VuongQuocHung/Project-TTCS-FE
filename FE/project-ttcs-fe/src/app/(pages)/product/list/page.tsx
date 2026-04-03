@@ -1,0 +1,123 @@
+"use client";
+
+const products = Array(6).fill({
+  name: "Lenovo LOQ 15IRX10 83JE00PEVN",
+  price: "35.790.000₫",
+  oldPrice: "37.990.000₫",
+  specs: ["i7-13650HX", "16 GB", "RTX 5050", "15.6 FHD 144Hz"],
+  image: "/assets/images/loq.jpg",
+});
+
+export default function ProductPage() {
+  return (
+    <div className="bg-[#f5f7fa] min-h-screen">
+      <div className="max-w-[1200px] mx-auto px-[20px] py-[24px]">
+        {/* TITLE */}
+        <h1 className="text-[32px] font-bold mb-[8px]">Laptop Gaming</h1>
+        <p className="text-[14px] text-gray-500 mb-[24px]">
+          Hiệu năng cực cao, chuyên dành cho game thủ đam mê tốc độ và đồ họa.
+        </p>
+
+        <div className="flex gap-[24px]">
+          {/* FILTER */}
+          <div className="w-[260px] bg-white rounded-[12px] p-[16px] border">
+            <h3 className="font-semibold mb-[16px] text-[14px]">Filters</h3>
+            {/* Price */}
+            <div className="mb-[20px]">
+              <p className="font-medium text-[13px] mb-[8px]">Price Range</p>
+              <div className="h-[4px] bg-gray-200 rounded" />
+              <div className="flex justify-between text-[12px] mt-[4px] text-gray-400">
+                <span>$999</span>
+                <span>$4999+</span>
+              </div>
+            </div>
+
+            {/* Brand */}
+            <div className="mb-[20px]">
+              <p className="font-medium text-[13px] mb-[8px]">Brand</p>
+              {["Lenovo", "Acer", "Dell", "Asus"].map((b) => (
+                <label key={b} className="flex gap-[8px] text-[13px] mb-[4px]">
+                  <input type="checkbox" />
+                  {b}
+                </label>
+              ))}
+            </div>
+
+          </div>
+
+          {/* PRODUCT LIST */}
+          <div className="flex-1">
+
+            {/* SORT */}
+            <div className="flex justify-between items-center mb-[16px]">
+              <span className="text-[14px] text-gray-500">
+                8 Products Found
+              </span>
+
+              <select className="border px-[12px] py-[6px] rounded-[8px] text-[13px]">
+                <option>Newest Arrivals</option>
+              </select>
+            </div>
+
+            {/* GRID */}
+            <div className="grid grid-cols-3 gap-[20px]">
+
+              {products.map((p, i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-[12px] border p-[16px] hover:shadow-md transition"
+                >
+                  <div className="relative">
+                    <img
+                      src={p.image}
+                      className="w-full h-[180px] object-contain"
+                    />
+                    <span className="absolute top-[8px] left-[8px] bg-blue-600 text-white text-[12px] px-[6px] py-[2px] rounded">
+                      GIẢM 5%
+                    </span>
+                  </div>
+
+                  <p className="font-semibold text-[14px] mt-[8px] mb-[4px]">
+                    {p.name}
+                  </p>
+
+                  {/* specs */}
+                  <div className="text-[12px] text-gray-500 mb-[8px]">
+                    {p.specs.map((s:any, idx:any) => (
+                      <div key={idx}>• {s}</div>
+                    ))}
+                  </div>
+
+                  {/* price */}
+                  <p className="text-[13px] line-through text-gray-400">
+                    {p.oldPrice}
+                  </p>
+                  <p className="text-[18px] font-bold mb-[8px]">
+                    {p.price}
+                  </p>
+
+                  <button className="w-full bg-blue-600 text-white py-[8px] rounded-[8px] text-[14px]">
+                    Add to Cart
+                  </button>
+                </div>
+              ))}
+
+            </div>
+
+            {/* PAGINATION */}
+            <div className="flex justify-center mt-[24px] gap-[8px]">
+              {[1, 2, 3].map((p) => (
+                <button
+                  key={p}
+                  className="w-[32px] h-[32px] border rounded-[8px] text-[14px]"
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

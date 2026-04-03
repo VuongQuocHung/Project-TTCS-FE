@@ -14,19 +14,15 @@ export default function UserLoginPage() {
         <div className="container">
           <div className="border border-[#DEDEDE] rounded-[8px] overflow-hidden max-w-[900px] mx-auto flex min-h-[520px] shadow-lg">
 
-            {/* Panel trái */}
             <div className="relative hidden md:flex w-[45%] p-[40px]">
               
-              {/* Ảnh */}
               <div className="relative z-10 w-full rounded-[10px] overflow-hidden">
                 
-                {/* Ảnh */}
                 <img
                   src="/images/laptop-1.png"
                   className="absolute inset-0 w-full h-full object-cover"
                 />
 
-                {/* Text */}
                 <div className="absolute bottom-6 left-6 right-6">
                   <h2 className="text-white font-[800] text-[28px] leading-tight mb-[10px]">
                     Cơ hội sở hữu <br /> chiếc laptop tốt nhất<br /> trong tầm tay.
@@ -40,7 +36,6 @@ export default function UserLoginPage() {
               </div>
             </div>
 
-            {/* Panel phải — Form */}
             <div className="flex-1 flex flex-col justify-center py-[50px] px-[40px] bg-white">
               <h1 className="font-[700] text-[22px] text-black mb-[4px]">
                 Đăng nhập
@@ -49,7 +44,6 @@ export default function UserLoginPage() {
                 Chào mừng khách hàng quay trở lại.
               </p>
 
-              {/* Tabs */}
               <div className="flex rounded-[6px] border border-[#DEDEDE] overflow-hidden mb-[28px]">
                 <button className="flex-1 py-[11px] text-[12px] font-[700] tracking-widest uppercase bg-[#1A1A2E] text-white transition-all">
                   Đăng nhập
@@ -60,7 +54,6 @@ export default function UserLoginPage() {
               </div>
 
               <form action="" className="grid grid-cols-1 gap-y-[16px]">
-                {/* Email */}
                 <div>
                   <label htmlFor="email" className="block font-[500] text-[13px] text-black mb-[6px]">
                     Email *
@@ -74,7 +67,6 @@ export default function UserLoginPage() {
                   />
                 </div>
 
-                {/* Mật khẩu */}
                 <div>
                   <div className="flex items-center justify-between mb-[6px]">
                     <label htmlFor="password" className="block font-[500] text-[13px] text-black">
@@ -93,7 +85,6 @@ export default function UserLoginPage() {
                   />
                 </div>
 
-                {/* Submit */}
                 <div>
                   <button
                     type="submit"
@@ -108,7 +99,6 @@ export default function UserLoginPage() {
                 </div>
               </form>
 
-              {/* Divider */}
               <div className="flex items-center gap-[12px] my-[20px]">
                 <div className="flex-1 h-px bg-[#EFEFEF]" />
                 <span className="text-[11px] font-[600] tracking-widest text-[#BDBDBD] uppercase">
@@ -117,7 +107,6 @@ export default function UserLoginPage() {
                 <div className="flex-1 h-px bg-[#EFEFEF]" />
               </div>
 
-              {/* Social */}
               <div className="flex justify-center gap-[10px]">
                 <button>
                   <FcGoogle size={30} />
