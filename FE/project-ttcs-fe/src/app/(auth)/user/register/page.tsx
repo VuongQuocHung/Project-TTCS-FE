@@ -1,11 +1,19 @@
-import { Metadata } from "next"
-
-export const metadata: Metadata = {
-  title: "Đăng ký (Khách hàng)",
-  description: "Trang đăng ký tài khoản khách hàng...",
-}
+"use client";
 
 export default function UserRegisterPage() {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const form = event.currentTarget; 
+    const formData = new FormData(form);
+
+    const name = formData.get("name");
+    const email = formData.get("email");
+    const password = formData.get("password");
+
+    console.log(name, email, password);
+  };
+
   return (
     <div className="py-[60px]">
       <div className="container">
@@ -15,7 +23,7 @@ export default function UserRegisterPage() {
           <div className="relative hidden md:flex w-[45%] p-[40px]">
             <div className="relative z-10 w-full rounded-[10px] overflow-hidden">
               <img
-                src="/images/laptop-1.png"
+                src="/assets/images/laptop-1.png"
                 className="absolute inset-0 w-full h-full object-cover"
               />
               <div className="absolute bottom-6 left-6 right-6">
@@ -38,7 +46,7 @@ export default function UserRegisterPage() {
               Tạo tài khoản mới để bắt đầu mua sắm.
             </p>
 
-            <form action="" className="grid grid-cols-1 gap-y-[16px]">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-y-[16px]">
               <div>
                 <label htmlFor="name" className="block font-[500] text-[13px] text-black mb-[6px]">
                   Họ và tên *
@@ -78,7 +86,7 @@ export default function UserRegisterPage() {
                 />
               </div>
 
-              <button className="w-full py-[12px] bg-[#1A1A2E] text-white font-[700] rounded-[6px] hover:bg-[#333] transition-all">
+              <button className="w-full py-[12px] bg-[#1A1A2E] text-white font-[700] rounded-[6px] hover:bg-red-500 transition-all">
                 Đăng ký
               </button>
             </form>

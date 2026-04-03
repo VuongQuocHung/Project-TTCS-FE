@@ -1,38 +1,40 @@
-import { Metadata } from "next"
+"use client";
+import { FormEvent } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple, FaFacebook } from "react-icons/fa";
 
-export const metadata: Metadata = {
-  title: "Đăng nhập (Khách hàng)",
-  description: "Mô tả trang đăng nhập (khách hàng)...",
-}
-
 export default function UserLoginPage() {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const form = event.currentTarget; 
+    const formData = new FormData(form);
+
+    const email = formData.get("email");
+    const password = formData.get("password");
+
+    console.log(email, password);
+  };
   return (
     <>
       <div className="py-[60px]">
         <div className="container">
-          <div className="border border-[#DEDEDE] rounded-[8px] overflow-hidden max-w-[900px] mx-auto flex min-h-[520px] shadow-lg">
-
+          <div className="border border-[#DEDEDE] rounded-[8px] overflow-hidden 
+          max-w-[900px] mx-auto flex min-h-[520px] shadow-lg">
             <div className="relative hidden md:flex w-[45%] p-[40px]">
-              
               <div className="relative z-10 w-full rounded-[10px] overflow-hidden">
-                
                 <img
-                  src="/images/laptop-1.png"
+                  src="/assets/images/laptop-1.png"
                   className="absolute inset-0 w-full h-full object-cover"
                 />
-
                 <div className="absolute bottom-6 left-6 right-6">
                   <h2 className="text-white font-[800] text-[28px] leading-tight mb-[10px]">
                     Cơ hội sở hữu <br /> chiếc laptop tốt nhất<br /> trong tầm tay.
                   </h2>
-
                   <p className="text-[#00A2FF] font-[500] text-[14px] leading-relaxed">
                     Đăng nhập để khám phá hàng nghìn<br /> sản phẩm hấp dẫn.
                   </p>
                 </div>
-
               </div>
             </div>
 
@@ -45,7 +47,7 @@ export default function UserLoginPage() {
               </p>
 
               <div className="flex rounded-[6px] border border-[#DEDEDE] overflow-hidden mb-[28px]">
-                <button className="flex-1 py-[11px] text-[12px] font-[700] tracking-widest uppercase bg-[#1A1A2E] text-white transition-all">
+                <button className="flex-1 py-[11px] text-[12px] font-[700] bg-[#1A1A2E] text-white transition-all">
                   Đăng nhập
                 </button>
                 <button className="flex-1 py-[11px] text-[12px] font-[700] tracking-widest uppercase bg-white text-[#999] hover:bg-slate-50 transition-all">
@@ -53,7 +55,7 @@ export default function UserLoginPage() {
                 </button>
               </div>
 
-              <form action="" className="grid grid-cols-1 gap-y-[16px]">
+              <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-y-[16px]">
                 <div>
                   <label htmlFor="email" className="block font-[500] text-[13px] text-black mb-[6px]">
                     Email *
@@ -88,7 +90,9 @@ export default function UserLoginPage() {
                 <div>
                   <button
                     type="submit"
-                    className="bg-[#0088FF] hover:bg-[#006FD6] active:bg-[#005BBF] rounded-[4px] w-full h-[48px] px-[20px] font-[700] text-[15px] text-white flex items-center justify-center gap-[8px] transition-colors shadow-md shadow-[#0088FF]/25 mt-[4px]"
+                    className="bg-[#0088FF] hover:bg-[#006FD6] active:bg-[#005BBF] 
+                    rounded-[4px] w-full h-[48px] px-[20px] font-[700] text-[15px] 
+                    text-white flex items-center justify-center gap-[8px] mt-[4px]"
                   >
                     Đăng nhập
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -111,11 +115,9 @@ export default function UserLoginPage() {
                 <button>
                   <FcGoogle size={30} />
                 </button>
-
                 <button>
                   <FaApple size={30} />
                 </button>
-
                 <button>
                   <FaFacebook size={30} color="#1877F2" />
                 </button>

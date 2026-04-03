@@ -21,10 +21,10 @@ export default function ProductPage() {
         <div className="flex gap-[24px]">
           {/* FILTER */}
           <div className="w-[260px] bg-white rounded-[12px] p-[16px] border">
-            <h3 className="font-semibold mb-[16px] text-[14px]">Filters</h3>
+            <h3 className="font-semibold mb-[16px] text-[14px]">Bộ lọc</h3>
             {/* Price */}
             <div className="mb-[20px]">
-              <p className="font-medium text-[13px] mb-[8px]">Price Range</p>
+              <p className="font-medium text-[13px] mb-[8px]">Khoảng giá</p>
               <div className="h-[4px] bg-gray-200 rounded" />
               <div className="flex justify-between text-[12px] mt-[4px] text-gray-400">
                 <span>$999</span>
@@ -43,6 +43,27 @@ export default function ProductPage() {
               ))}
             </div>
 
+            {/* CPU */}
+            <div className="mb-[20px]">
+              <p className="font-medium text-[13px] mb-[8px]">CPU</p>
+              {["Intel i5", "Intel i7", "AMD Ryzen 5", "AMD Ryzen 7"].map((c) => (
+                <label key={c} className="flex gap-[8px] text-[13px] mb-[4px]">
+                  <input type="checkbox" />
+                  {c}
+                </label>
+              ))}
+            </div>
+
+            {/* RAM */}
+            <div className="mb-[20px]">
+              <p className="font-medium text-[13px] mb-[8px]">RAM</p>
+              {["8 GB", "16 GB", "32 GB", "64 GB"].map((r) => (
+                <label key={r} className="flex gap-[8px] text-[13px] mb-[4px]">
+                  <input type="checkbox" />
+                  {r}
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* PRODUCT LIST */}
@@ -55,7 +76,9 @@ export default function ProductPage() {
               </span>
 
               <select className="border px-[12px] py-[6px] rounded-[8px] text-[13px]">
-                <option>Newest Arrivals</option>
+                <option>Mới nhất</option>
+                <option>Giá thấp đến cao</option>
+                <option>Giá cao đến thấp</option>
               </select>
             </div>
 
