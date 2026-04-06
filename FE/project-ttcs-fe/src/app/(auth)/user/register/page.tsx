@@ -1,17 +1,44 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { register, type ApiError } from "@/lib/api";
+
 export default function UserRegisterPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    setError(null);
+    setSuccess(null);
 
     const form = event.currentTarget; 
     const formData = new FormData(form);
 
-    const name = formData.get("name");
-    const email = formData.get("email");
-    const password = formData.get("password");
+    const fullName = String(formData.get("fullName") ?? "").trim();
+    const email = String(formData.get("email") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
 
-    console.log(name, email, password);
+    if (!fullName || !email || !phone || !password) {
+      setError("Vui lòng nhập đầy đủ thông tin.");
+      return;
+    }
+
+    setIsLoading(true);
+    register({ fullName, email, phone, password })
+      .then((res) => {
+        setSuccess(`Đăng ký thành công: ${res.fullName}`);
+        router.push("/user/login");
+      })
+      .catch((e: ApiError) => {
+        setError(e?.message || "Đăng ký thất bại");
+      })
+      .finally(() => setIsLoading(false));
   };
 
   return (
@@ -48,13 +75,14 @@ export default function UserRegisterPage() {
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-y-[16px]">
               <div>
-                <label htmlFor="name" className="block font-[500] text-[13px] text-black mb-[6px]">
+                <label htmlFor="fullName" className="block font-[500] text-[13px] text-black mb-[6px]">
                   Họ và tên *
                 </label>
                 <input
                   type="text"
-                  id="name"
-                  name="name"
+                  id="fullName"
+                  name="fullName"
+                  autoComplete="name"
                   placeholder="Nguyễn Văn A"
                   className="w-full border border-[#DEDEDE] rounded-[6px] px-[12px] py-[10px] text-[14px]"
                 />
@@ -68,7 +96,22 @@ export default function UserRegisterPage() {
                   type="email"
                   id="email"
                   name="email"
+                  autoComplete="email"
                   placeholder="example@gmail.com"
+                  className="w-full border border-[#DEDEDE] rounded-[6px] px-[12px] py-[10px] text-[14px]"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="phone" className="block font-[500] text-[13px] text-black mb-[6px]">
+                  Số điện thoại *
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  autoComplete="tel"
+                  placeholder="0xxxxxxxxx"
                   className="w-full border border-[#DEDEDE] rounded-[6px] px-[12px] py-[10px] text-[14px]"
                 />
               </div>
@@ -81,13 +124,24 @@ export default function UserRegisterPage() {
                   type="password"
                   id="password"
                   name="password"
+                  autoComplete="new-password"
                   placeholder="********"
                   className="w-full border border-[#DEDEDE] rounded-[6px] px-[12px] py-[10px] text-[14px]"
                 />
               </div>
 
-              <button className="w-full py-[12px] bg-[#1A1A2E] text-white font-[700] rounded-[6px] hover:bg-red-500 transition-all">
-                Đăng ký
+              {error ? (
+                <p className="text-[12px] text-red-600 font-[600]">{error}</p>
+              ) : null}
+              {success ? (
+                <p className="text-[12px] text-green-700 font-[600]">{success}</p>
+              ) : null}
+
+              <button
+                disabled={isLoading}
+                className="w-full py-[12px] bg-[#1A1A2E] text-white font-[700] rounded-[6px] hover:bg-red-500 transition-all disabled:opacity-70"
+              >
+                {isLoading ? "Đang đăng ký..." : "Đăng ký"}
               </button>
             </form>
           </div>

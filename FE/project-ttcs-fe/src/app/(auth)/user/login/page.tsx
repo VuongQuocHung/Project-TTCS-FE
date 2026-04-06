@@ -1,19 +1,45 @@
 "use client";
-import { FormEvent } from "react";
+import { useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple, FaFacebook } from "react-icons/fa";
+import { login, writeAuthToken, type ApiError } from "@/lib/api";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function UserLoginPage() {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    setError(null);
+    setSuccess(null);
 
     const form = event.currentTarget; 
     const formData = new FormData(form);
 
-    const email = formData.get("email");
-    const password = formData.get("password");
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
 
-    console.log(email, password);
+    if (!email || !password) {
+      setError("Vui lòng nhập email và mật khẩu.");
+      return;
+    }
+
+    setIsLoading(true);
+    login({ email, password })
+      .then((res) => {
+        writeAuthToken(res.token);
+        setSuccess(`Đăng nhập thành công: ${res.fullName}`);
+        router.push("/");
+      })
+      .catch((e: ApiError) => {
+        setError(e?.message || "Đăng nhập thất bại");
+      })
+      .finally(() => setIsLoading(false));
   };
   return (
     <>
@@ -47,12 +73,16 @@ export default function UserLoginPage() {
               </p>
 
               <div className="flex rounded-[6px] border border-[#DEDEDE] overflow-hidden mb-[28px]">
-                <button className="flex-1 py-[11px] text-[12px] font-[700] bg-[#1A1A2E] text-white transition-all">
+                <button className="flex-1 py-[11px] text-[12px] font-[700] bg-[#1A1A2E] 
+                text-white transition-all">
                   Đăng nhập
                 </button>
-                <button className="flex-1 py-[11px] text-[12px] font-[700] tracking-widest uppercase bg-white text-[#999] hover:bg-slate-50 transition-all">
-                  Đăng ký
-                </button>
+                <div className="flex-1 py-[11px] text-[12px] font-[700] tracking-widest uppercase 
+                bg-white text-[#999] hover:bg-slate-50 transition-all">
+                  <Link href="/user/register" className="text-[#0088FF] hover:underline items-center justify-center flex gap-[4px]">
+                    Đăng ký
+                  </Link>
+                </div>
               </div>
 
               <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-y-[16px]">
@@ -64,8 +94,10 @@ export default function UserLoginPage() {
                     type="email"
                     id="email"
                     name="email"
+                    autoComplete="email"
                     placeholder="example@email.com"
-                    className="w-full h-[46px] border border-[#DEDEDE] rounded-[4px] py-[14px] px-[16px] font-[500] text-[14px] text-black bg-[#FAFAFA] focus:outline-none focus:border-[#0088FF] focus:ring-2 focus:ring-[#0088FF]/20 transition"
+                    className="w-full h-[46px] border border-[#DEDEDE] rounded-[4px] py-[14px] px-[16px] font-[500] text-[14px] text-black bg-[#FAFAFA] focus:outline-none focus:border-[#0088FF] 
+                    focus:ring-2 focus:ring-[#0088FF]/20 transition"
                   />
                 </div>
 
@@ -82,19 +114,28 @@ export default function UserLoginPage() {
                     type="password"
                     id="password"
                     name="password"
+                    autoComplete="current-password"
                     placeholder="••••••••"
                     className="w-full h-[46px] border border-[#DEDEDE] rounded-[4px] py-[14px] px-[16px] font-[500] text-[14px] text-black bg-[#FAFAFA] focus:outline-none focus:border-[#0088FF] focus:ring-2 focus:ring-[#0088FF]/20 transition"
                   />
                 </div>
 
+                {error ? (
+                  <p className="text-[12px] text-red-600 font-[600]">{error}</p>
+                ) : null}
+                {success ? (
+                  <p className="text-[12px] text-green-700 font-[600]">{success}</p>
+                ) : null}
+
                 <div>
                   <button
                     type="submit"
+                    disabled={isLoading}
                     className="bg-[#0088FF] hover:bg-[#006FD6] active:bg-[#005BBF] 
                     rounded-[4px] w-full h-[48px] px-[20px] font-[700] text-[15px] 
-                    text-white flex items-center justify-center gap-[8px] mt-[4px]"
+                    text-white flex items-center justify-center gap-[8px] mt-[4px] disabled:opacity-70"
                   >
-                    Đăng nhập
+                    {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                       <line x1="5" y1="12" x2="19" y2="12" />
                       <polyline points="12 5 19 12 12 19" />

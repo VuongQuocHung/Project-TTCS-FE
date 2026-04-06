@@ -1,14 +1,67 @@
 "use client";
 
-const products = Array(6).fill({
-  name: "Lenovo LOQ 15IRX10 83JE00PEVN",
-  price: "35.790.000₫",
-  oldPrice: "37.990.000₫",
-  specs: ["i7-13650HX", "16 GB", "RTX 5050", "15.6 FHD 144Hz"],
-  image: "/assets/images/loq.jpg",
-});
+import { useEffect, useMemo, useState } from "react";
+import { getProducts, type Product } from "@/lib/api";
+
+function formatVnd(value: unknown): string {
+  const n = typeof value === "string" ? Number(value) : (value as number);
+  if (!Number.isFinite(n)) return "";
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+function pickPrimaryImage(p: Product): string {
+  const images = p.images ?? [];
+  const primary = images.find((i) => i.isPrimary) ?? images[0];
+  return primary?.imageUrl || "/assets/images/loq.jpg";
+}
+
+function buildSpecs(p: Product): string[] {
+  const s = p.specification;
+  const items = [s?.cpu, s?.ram, s?.vga, s?.screen].filter(
+    (x): x is string => typeof x === "string" && x.trim().length > 0
+  );
+  return items;
+}
 
 export default function ProductPage() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    setError(null);
+
+    getProducts()
+      .then((data) => {
+        if (!isMounted) return;
+        setProducts(data);
+      })
+      .catch((e: any) => {
+        if (!isMounted) return;
+        setError(e?.message || "Không tải được danh sách sản phẩm");
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const productCountLabel = useMemo(() => {
+    if (isLoading) return "Đang tải...";
+    if (error) return "0 Products Found";
+    return `${products.length} Products Found`;
+  }, [isLoading, error, products.length]);
+
   return (
     <div className="bg-[#f5f7fa] min-h-screen">
       <div className="max-w-[1200px] mx-auto px-[20px] py-[24px]">
@@ -72,7 +125,7 @@ export default function ProductPage() {
             {/* SORT */}
             <div className="flex justify-between items-center mb-[16px]">
               <span className="text-[14px] text-gray-500">
-                8 Products Found
+                {productCountLabel}
               </span>
 
               <select className="border px-[12px] py-[6px] rounded-[8px] text-[13px]">
@@ -85,14 +138,25 @@ export default function ProductPage() {
             {/* GRID */}
             <div className="grid grid-cols-3 gap-[20px]">
 
-              {products.map((p, i) => (
+              {error ? (
+                <div className="col-span-3 bg-white rounded-[12px] border p-[16px] text-[14px] text-red-600 font-[600]">
+                  {error}
+                </div>
+              ) : null}
+
+              {products.map((p) => {
+                const specs = buildSpecs(p);
+                const price = formatVnd((p as any).price);
+                const image = pickPrimaryImage(p);
+
+                return (
                 <div
-                  key={i}
+                  key={p.id}
                   className="bg-white rounded-[12px] border p-[16px] hover:shadow-md transition"
                 >
                   <div className="relative">
                     <img
-                      src={p.image}
+                      src={image}
                       className="w-full h-[180px] object-contain"
                     />
                     <span className="absolute top-[8px] left-[8px] bg-blue-600 text-white text-[12px] px-[6px] py-[2px] rounded">
@@ -106,24 +170,24 @@ export default function ProductPage() {
 
                   {/* specs */}
                   <div className="text-[12px] text-gray-500 mb-[8px]">
-                    {p.specs.map((s:any, idx:any) => (
-                      <div key={idx}>• {s}</div>
-                    ))}
+                    {specs.length ? (
+                      specs.map((s) => <div key={s}>• {s}</div>)
+                    ) : (
+                      <div>• (Chưa có cấu hình)</div>
+                    )}
                   </div>
 
                   {/* price */}
-                  <p className="text-[13px] line-through text-gray-400">
-                    {p.oldPrice}
-                  </p>
                   <p className="text-[18px] font-bold mb-[8px]">
-                    {p.price}
+                    {price || ""}
                   </p>
 
                   <button className="w-full bg-blue-600 text-white py-[8px] rounded-[8px] text-[14px]">
                     Add to Cart
                   </button>
                 </div>
-              ))}
+                );
+              })}
 
             </div>
 
@@ -144,3 +208,4 @@ export default function ProductPage() {
     </div>
   );
 }
+
