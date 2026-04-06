@@ -1,5 +1,4 @@
 "use client";
-import { Navbar } from "@/app/components/navbar/Navbar";
 import Link from "next/link";
 
 import { useState, useEffect } from "react";
@@ -67,12 +66,13 @@ function useCountdown() {
 export default function HomePage() {
   const { h, m, s } = useCountdown();
   const pad = (n: number) => String(n).padStart(2, "0");
-
+  const categories = [
+    { name: "Gaming", desc: "Hiệu năng cao" },
+    { name: "Văn phòng", desc: "Hiệu quả và đáng tin cậy" },
+    { name: "Đồ họa", desc: "Mạnh mẽ cho người sáng tạo" },
+  ];
   return (
     <div className="bg-gray-100 min-h-screen font-sans">
-      {/* NAVBAR */}
-      {/* <Navbar /> */}
-
       <div className="max-w-[1152px] mx-auto p-[24px]">
         <div className="rounded-[16px] bg-gradient-to-br from-black via-slate-800 to-slate-900 
         text-white p-[48px] mb-[24px]">
@@ -98,10 +98,10 @@ export default function HomePage() {
 
         {/* CATEGORY */}
         <div className="grid grid-cols-3 gap-[16px] mb-[40px]">
-          {["Gaming", "Văn phòng", "Đồ họa"].map((c) => (
-            <div key={c} className="bg-gray-900 text-white p-[24px] rounded-[12px] cursor-pointer hover:opacity-90">
-              <p className="font-semibold">{c}</p>
-              <p className="text-[12px] text-gray-400">High performance</p>
+          {categories.map((c) => (
+            <div key={c.name} className="bg-gray-900 text-white p-[24px] rounded-[12px] cursor-pointer hover:opacity-90">
+              <p className="font-semibold">{c.name}</p>
+              <p className="text-[12px] text-gray-400">{c.desc}</p>
             </div>
           ))}
         </div>

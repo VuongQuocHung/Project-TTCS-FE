@@ -16,20 +16,20 @@ export const Header = () => {
       </Link>
 
       {/* DANH MỤC */}
-      <button className="flex items-center gap-[6px] bg-white/20 px-[12px] py-[8px] rounded-[8px] text-[14px]">
+      <button className="flex items-center gap-[6px] bg-white/20 px-[12px] h-[38px] rounded-[8px] text-[14px]">
         <LuGrid2X2X size={16} />
-        Danh mục
+        <span>Danh mục</span>
       </button>
 
       {/* LOCATION */}
-      <select className="flex items-center gap-[6px] bg-white/20 px-[12px] py-[8px] rounded-[8px] text-[14px]">
-        <option value="">
-          <FiMapPin size={16} /> Hà Nội
-        </option>
-        <option value="">
-          <FiMapPin size={16} /> Hồ Chí Minh
-        </option>
-      </select>
+      <div className="flex items-center gap-[6px] bg-white/20 px-[12px] h-[38px] rounded-[8px] text-[14px]">
+        <FiMapPin size={16} />
+        <select className="bg-transparent outline-none cursor-pointer ">
+          {/* Thêm text-black ở đây để chữ không bị lẫn vào nền trắng của dropdown */}
+          <option value="hn" className="text-black">Hà Nội</option>
+          <option value="hcm" className="text-black">Hồ Chí Minh</option>
+        </select>
+      </div>
 
       {/* SEARCH */}
       <div className="flex-1 flex items-center bg-white rounded-[999px] h-[40px] px-[16px]">
@@ -54,10 +54,13 @@ export const Header = () => {
       </button>
 
       {/* LOGIN */}
-      <button className="flex items-center gap-[6px] bg-white/20 px-[12px] py-[8px] rounded-[8px] text-[14px]">
+      <div className="flex items-center gap-[6px] bg-white/20 px-[12px] py-[8px] rounded-[8px] text-[14px]">
         <FaUser size={16} />
-        Đăng nhập
-      </button>
+        <Link href="/user/login" className="">Đăng nhập</Link>
+        <span className="">/</span>
+        <Link href="/user/register" className="">Đăng ký</Link>
+
+      </div>
 
     </header>
   );
