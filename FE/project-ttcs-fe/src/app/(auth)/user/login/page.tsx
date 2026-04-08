@@ -8,9 +8,9 @@ import { useRouter } from "next/navigation";
 
 export default function UserLoginPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false); // Trạng thái loading khi gửi yêu cầu đăng nhập
+  const [error, setError] = useState<string | null>(null); // Lỗi khi đăng nhập thất bại
+  const [success, setSuccess] = useState<string | null>(null); // Thông báo thành công khi đăng nhập thành công
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

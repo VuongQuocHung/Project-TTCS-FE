@@ -8,7 +8,9 @@ const DEFAULT_BASE_URL = "http://localhost:8080";
 
 function getApiBaseUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-  return envUrl && envUrl.trim().length > 0 ? envUrl : DEFAULT_BASE_URL;
+  return envUrl && envUrl.trim().length > 0 ? envUrl : DEFAULT_BASE_URL; 
+  // Nếu có env → dùng env
+  // Không → dùng localhost
 }
 
 function readAuthToken(): string | null {

@@ -3,8 +3,8 @@ import { Header } from "@/app/components/header/Header";
 import { Footer } from "@/app/components/footer/Footer";
 
 export const metadata: Metadata = {
-  title: "VPH STORE",
-  description: "Project TTCS: Xây dựng website bán laptop của Vũ, Phúc, Hưng",
+  title: "HĐP STORE",
+  description: "Project TTCS: Xây dựng website bán laptop của Hưng, Đức, Phúc",
 };
 
 export default function MainLayout({
