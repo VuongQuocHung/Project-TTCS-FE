@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { register, type ApiError } from "@/lib/api";
+import { type ApiError } from "@/lib/api";
+import { authApi } from "@/lib/api-endpoints";
 
 export default function UserRegisterPage() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function UserRegisterPage() {
     }
 
     setIsLoading(true);
-    register({ fullName, email, phone, password })
+    authApi.register({ fullName, email, phone, password })
       .then((res) => {
         setSuccess(`Đăng ký thành công: ${res.fullName}`);
         router.push("/user/login");

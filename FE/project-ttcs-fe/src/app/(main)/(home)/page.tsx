@@ -1,174 +1,219 @@
 "use client";
+
 import Link from "next/link";
-
-import { useState, useEffect } from "react";
-
-const flashSaleProducts = [
-  { 
-    id: 1, discount: "-40% OFF", 
-    name: "ThinkPad X1 Carbon Gen 13", 
-    image: "/assets/images/thinkpad-x1-carbon-gen-13.jpg",
-    desc: "Ultra 5 225H, 14 inch WUXGA IPS", 
-    price: "30.000.000₫", 
-    oldPrice: "50.000.000₫"
-  },
-  { 
-    id: 2, discount: "-15% OFF", 
-    name: "ASUS Vivobook 15 X1504VA", 
-    image: "/assets/images/asus-vivobook-x1504.webp",
-    desc: "Core i5-1335U", 
-    price: "14.490.000₫", 
-    oldPrice: "17.000.000₫" 
-  },
-  { 
-    id: 3, discount: "-20% OFF", 
-    name: "Dell Inspiron 15 3530", 
-    image: "/assets/images/dell.jpg",
-    desc: "Core i7-1355U", 
-    price: "18.990.000₫", 
-    oldPrice: "23.000.000₫" 
-  },
-  { 
-    id: 4, discount: "-10% OFF", 
-    name: "HP Pavilion 15", 
-    image: "/assets/images/hp-pavilion-15.jpg",
-
-    desc: "Core i5-1335U", 
-    price: "15.490.000₫", 
-    oldPrice: "17.200.000₫" 
-  },
-];
-
-const trendingProducts = [
-  { id: 1, name: "Lenovo LOQ Gaming", price: "35.790.000₫" },
-  { id: 2, name: "MacBook Air M3", price: "34.990.000₫" },
-  { id: 3, name: "ASUS ROG Strix", price: "45.990.000₫" },
-];
-
-function useCountdown() {
-  const [time, setTime] = useState({ h: 4, m: 22, s: 58 });
-  useEffect(() => {
-    const t = setInterval(() => {
-      setTime((prev) => {
-        let { h, m, s } = prev;
-        s--;
-        if (s < 0) { s = 59; m--; }
-        if (m < 0) { m = 59; h--; }
-        if (h < 0) return { h: 0, m: 0, s: 0 };
-        return { h, m, s };
-      });
-    }, 1000);
-    return () => clearInterval(t);
-  }, []);
-  return time;
-}
+import React, { useState, useEffect, Fragment } from "react";
+import { productApi } from "@/lib/api-endpoints";
+import { Product } from "@/types/api";
+import { 
+  Zap, 
+  TrendingUp, 
+  ShoppingBag, 
+  ArrowRight, 
+  Star,
+  Briefcase,
+  Layers
+} from "lucide-react";
+import { useCart } from "@/context/CartContext";
+import { CountdownTimer } from "@/app/components/common/CountdownTimer";
+import { categoryApi } from "@/lib/api-endpoints";
+import { Category } from "@/types/api";
 
 export default function HomePage() {
-  const { h, m, s } = useCountdown();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const categories = [
-    { name: "Gaming", desc: "Hiệu năng cao" },
-    { name: "Văn phòng", desc: "Hiệu quả và đáng tin cậy" },
-    { name: "Đồ họa", desc: "Mạnh mẽ cho người sáng tạo" },
-  ];
+  const { addToCart } = useCart();
+  const [flashSaleProducts, setFlashSaleProducts] = useState<Product[]>([]);
+  const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHomeData = async () => {
+      try {
+        const [prodRes, catRes] = await Promise.all([
+          productApi.getAll({ size: 8 }),
+          categoryApi.getAll({ size: 3 })
+        ]);
+        
+        const allProducts = prodRes.content || [];
+        setFlashSaleProducts(allProducts.slice(0, 4));
+        setTrendingProducts(allProducts.slice(4, 7));
+        setCategories(catRes.content || []);
+      } catch (error) {
+        console.error("Failed to fetch home data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchHomeData();
+  }, []);
+
+
+
   return (
-    <div className="bg-gray-100 min-h-screen font-sans">
-      <div className="max-w-[1152px] mx-auto p-[24px]">
-        <div className="rounded-[16px] bg-gradient-to-br from-black via-slate-800 to-slate-900 
-        text-white p-[48px] mb-[24px]">
-          <span className="bg-blue-600 text-[12px] px-[12px] py-[4px] rounded-full font-semibold">
-            NEW
-          </span>
+    <div className="bg-slate-50 min-h-screen font-sans pb-20">
+      <div className="max-w-[1200px] mx-auto px-6 pt-10">
+        {/* HERO BANNER */}
+        <div className="relative rounded-3xl bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 
+        text-white p-12 mb-12 overflow-hidden shadow-2xl shadow-blue-200/50">
+          <div className="relative z-10 max-w-lg">
+            <span className="inline-flex items-center gap-2 bg-blue-600/30 text-blue-400 text-xs px-3 py-1.5 rounded-full font-bold border border-blue-500/30">
+              <Star className="w-3.5 h-3.5 fill-blue-400" />
+              NEW ARRIVALS 2026
+            </span>
 
-          <h1 className="text-[36px] font-extrabold mt-[16px] mb-[12px]">
-            LAPTOP GIÁ RẺ <br /> NHƯ CHO
-          </h1>
+            <h1 className="text-5xl font-black mt-6 mb-6 leading-tight tracking-tighter">
+              LAPTOP CAO CẤP <br /> 
+              <span className="text-blue-500">ƯU ĐÃI KHỦNG</span>
+            </h1>
 
-          <p className="text-gray-400 mb-[24px]">Mua 1 laptop – Tặng 3 phụ kiện</p>
+            <p className="text-slate-400 text-lg mb-8 leading-relaxed">
+              Trải nghiệm hiệu năng vượt trội với các dòng Laptop thế hệ mới nhất. <br/>
+              Tặng ngay bộ quà tặng Gaming trị giá 2.000.000₫.
+            </p>
 
-          <div className="flex gap-[12px]">
-            <button className="bg-blue-600 px-[20px] py-[8px] rounded-[18px] font-semibold hover:bg-blue-700">
-              Mua ngay
-            </button>
-            <button className="border border-white/30 px-[20px] py-[8px] rounded-[18px]">
-              Xem thêm
-            </button>
+            <div className="flex gap-4">
+              <Link href="/product/list" className="bg-blue-600 px-8 py-3.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-900/40 flex items-center gap-2">
+                Mua ngay
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <button className="bg-white/10 border border-white/20 backdrop-blur-md px-8 py-3.5 rounded-xl font-bold hover:bg-white/20 transition">
+                Xem thêm
+              </button>
+            </div>
           </div>
+          
+          {/* Decorative Elements */}
+          <div className="absolute top-1/2 right-[-10%] translate-y-[-50%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]" />
         </div>
 
-        {/* CATEGORY */}
-        <div className="grid grid-cols-3 gap-[16px] mb-[40px]">
-          {categories.map((c) => (
-            <div key={c.name} className="bg-gray-900 text-white p-[24px] rounded-[12px] cursor-pointer hover:opacity-90">
-              <p className="font-semibold">{c.name}</p>
-              <p className="text-[12px] text-gray-400">{c.desc}</p>
+        {/* CATEGORY GRID */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+          {categories.slice(0, 3).map((c) => (
+            <div key={c.id} className="group bg-white p-8 rounded-2xl border border-slate-200 cursor-pointer shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 flex items-center gap-6">
+              <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                 <Layers className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{c.name}</p>
+                <p className="text-sm text-slate-500 line-clamp-1">{c.description || "Khám phá ngay"}</p>
+              </div>
             </div>
           ))}
         </div>
 
-        {/* FLASH SALE */}
-        <div className="mb-[40px]">
-          <div className="flex justify-between items-center mb-[20px]">
-            <div className="flex items-center gap-[12px]">
-              <h2 className="text-[20px] font-bold">Flash Sale</h2>
+        {/* FLASH SALE SECTION */}
+        <div className="mb-16">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-xl font-bold animate-pulse">
+                <Zap className="w-5 h-5 fill-white" />
+                Flash Sale
+              </div>
 
-              <div className="flex gap-[4px]">
-                {[pad(h), pad(m), pad(s)].map((t, i) => (
-                  <span key={i} className="bg-blue-700 text-white px-[8px] rounded text-[14px] font-bold">
-                    {t}
-                  </span>
-                ))}
+              <div className="flex items-center gap-2 text-slate-900">
+                <span className="text-sm font-semibold opacity-50 ml-2">Kết thúc trong:</span>
+                <CountdownTimer />
               </div>
             </div>
 
-            <a href="#" className="text-blue-600 text-[14px]">Xem tất cả</a>
+            <Link href="/product/list" className="group flex items-center text-blue-600 font-bold text-sm hover:text-blue-700">
+              Xem tất cả sản phẩm
+              <ArrowRight className="w-4 h-4 ml-1 group-hover:ml-2 transition-all" />
+            </Link>
           </div>
 
-          <div className="grid grid-cols-4 gap-[16px]">
-            {flashSaleProducts.map((p) => (
-              <div key={p.id} className="bg-white p-[16px] rounded-[12px] border hover:shadow">
-                <span className="bg-red-500 text-white text-[12px] px-[8px] py-[4px] rounded">
-                  {p.discount}
-                </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {isLoading ? (
+              Array(4).fill(0).map((_, i) => (
+                <div key={i} className="bg-white p-6 rounded-2xl border border-slate-100 h-[380px] animate-pulse" />
+              ))
+            ) : (
+              flashSaleProducts.map((p) => (
+                <div key={p.id} className="group bg-white p-6 rounded-3xl border border-slate-200 hover:shadow-2xl hover:shadow-blue-100 hover:border-blue-100 transition-all duration-300 flex flex-col">
+                  <Link href={`/product/${p.id}`} className="flex-1">
+                    <div className="relative aspect-square mb-6 overflow-hidden rounded-xl bg-slate-50">
+                      <span className="absolute top-3 left-3 z-10 bg-red-600 text-white text-[10px] px-2 py-1 rounded-md font-bold uppercase tracking-wider">
+                        SALE 20%
+                      </span>
+                      <img
+                        src={p.images?.[0]?.imageUrl || "/assets/images/loq.jpg"}
+                        alt={p.name}
+                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
+                      />
+                    </div>
 
-                <img
-                  src={p.image}
-                  alt={p.name}
-                  className="h-[128px] w-full object-cover rounded my-[12px]"
-                />
+                    <h3 className="text-sm font-bold text-slate-900 mb-2 truncate group-hover:text-blue-600 transition-colors">
+                      {p.name}
+                    </h3>
+                    <p className="text-xs text-slate-500 mb-6 line-clamp-2 min-h-[32px]">
+                      {p.specification?.cpu} {p.specification?.ram} {p.specification?.vga}
+                    </p>
+                  </Link>
 
-                <p className="text-[14px] font-semibold">{p.name}</p>
-                <p className="text-[12px] text-gray-400">{p.desc}</p>
+                  <div className="flex justify-between items-end mt-auto">
+                    <Link href={`/product/${p.id}`}>
+                      <p className="text-lg font-black text-blue-600 tracking-tight">
+                        {new Intl.NumberFormat("vi-VN", {
+                          style: "currency",
+                          currency: "VND",
+                        }).format(p.price || 0)}
+                      </p>
+                      <p className="text-xs line-through text-slate-400 font-medium">
+                        {new Intl.NumberFormat("vi-VN", {
+                          style: "currency",
+                          currency: "VND",
+                        }).format((p.price || 0) * 1.2)}
+                      </p>
+                    </Link>
 
-                <div className="flex justify-between items-center mt-[12px]">
-                  <div>
-                    <p className="font-bold">{p.price}</p>
-                    <p className="text-[12px] line-through text-gray-400">{p.oldPrice}</p>
+                    <button 
+                      onClick={() => addToCart(p)}
+                      className="bg-blue-600 text-white p-3 rounded-xl hover:bg-slate-900 transition-all shadow-lg shadow-blue-100"
+                    >
+                      <ShoppingBag className="w-5 h-5" />
+                    </button>
                   </div>
-
-                  <button className="bg-blue-600 text-white px-[12px] py-[4px] rounded">
-                    +
-                  </button>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
-        {/* TRENDING */}
-        <div className="mb-[40px]">
-          <h2 className="text-[20px] font-bold mb-[16px]">Trending</h2>
+        {/* TRENDING BAR */}
+        <div className="mb-20">
+          <div className="flex items-center gap-3 mb-8">
+            <TrendingUp className="w-6 h-6 text-blue-600" />
+            <h2 className="text-2xl font-black text-slate-900 tracking-tighter">Xu hướng tìm kiếm</h2>
+          </div>
 
-          <div className="grid grid-cols-3 gap-[16px]">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {trendingProducts.map((p) => (
-              <div key={p.id} className="bg-white p-[16px] rounded-[12px] border flex gap-[16px] hover:shadow">
-                <div className="w-[80px] h-[80px] bg-gray-900 rounded" />
-
-                <div>
-                  <p className="font-semibold text-[14px]">{p.name}</p>
-                  <p className="text-blue-600 font-bold">{p.price}</p>
+              <Link
+                key={p.id}
+                href={`/product/${p.id}`}
+                className="group bg-white p-6 rounded-2xl border border-slate-200 hover:border-blue-200 hover:shadow-xl transition-all duration-300 flex items-center gap-6"
+              >
+                <div className="w-24 h-24 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  <img 
+                    src={p.images?.[0]?.imageUrl || "/assets/images/loq.jpg"} 
+                    alt={p.name} 
+                    className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
+                  />
                 </div>
-              </div>
+
+                <div className="min-w-0">
+                  <p className="font-bold text-slate-900 truncate mb-1 group-hover:text-blue-600 transition-colors">{p.name}</p>
+                  <p className="text-blue-600 font-black text-lg">
+                    {new Intl.NumberFormat("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    }).format(p.price || 0)}
+                  </p>
+                  <div className="flex items-center gap-1 mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    In Stock
+                  </div>
+                </div>
+              </Link>
             ))}
           </div>
         </div>

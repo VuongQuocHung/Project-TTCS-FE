@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import React from "react";
 import "./globals.css";
 
 
+import { Providers } from "@/components/Providers";
+
 export const metadata: Metadata = {
-  title: " Project TTCS",
+  title: "VPH STORE",
   description: "Project TTCS: Xây dựng website bán laptop",
 };
 
@@ -14,8 +17,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <body>
-        {children}
+      <body className="antialiased">
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );
