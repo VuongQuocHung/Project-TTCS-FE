@@ -19,22 +19,30 @@ import { useCart } from "@/context/CartContext";
 import Link from "next/link";
 import { categoryApi, brandApi } from "@/lib/api-endpoints";
 import { Category, Brand } from "@/types/api";
+import { Pagination } from "@/app/components/common/Pagination";
 
 function ProductListContent() {
   const { addToCart } = useCart();
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const PAGE_SIZE = 3;
   
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0); // Tổng số sản phẩm phù hợp với bộ lọc (không phải số sản phẩm trên trang hiện tại)
+  const [numberOfElements, setNumberOfElements] = useState(0); // Số sản phẩm thực tế trên trang hiện tại (có thể nhỏ hơn PAGE_SIZE nếu là trang cuối hoặc không có sản phẩm nào)
 
   // Filter states
   const q = searchParams.get("q") || "";
   const brandId = searchParams.get("brandId");
   const categoryId = searchParams.get("categoryId");
+  const pageParam = Number(searchParams.get("page") || "0");
+  const currentPage = Number.isFinite(pageParam) && pageParam >= 0 ? pageParam : 0;
 
   useEffect(() => {
     let isMounted = true;
@@ -45,17 +53,25 @@ function ProductListContent() {
       name: q || undefined,
       brandId: brandId ? Number(brandId) : undefined,
       categoryId: categoryId ? Number(categoryId) : undefined,
-      size: 20
+      page: currentPage,
+      size: PAGE_SIZE
     };
 
     productApi.getAll(params)
       .then((res) => {
         if (!isMounted) return;
         setProducts(res.content || []);
+        setTotalPages(res.totalPages || 0);
+        setTotalElements(res.totalElements || 0);
+        setNumberOfElements(res.numberOfElements || (res.content?.length || 0));
       })
       .catch((e: any) => {
         if (!isMounted) return;
         setError(e?.message || "Không tải được danh sách sản phẩm");
+        setProducts([]);
+        setTotalPages(0);
+        setTotalElements(0);
+        setNumberOfElements(0);
       })
       .finally(() => {
         if (!isMounted) return;
@@ -65,7 +81,7 @@ function ProductListContent() {
     return () => {
       isMounted = false;
     };
-  }, [q, brandId, categoryId]);
+  }, [q, brandId, categoryId, currentPage]);
 
   useEffect(() => {
     const fetchMetadata = async () => {
@@ -90,7 +106,22 @@ function ProductListContent() {
     } else {
       params.delete(key);
     }
-    router.push(`/product/list?${params.toString()}`);
+    // Reset to page 1 (index 0) whenever filters change.
+    params.delete("page");
+    const query = params.toString();
+    router.push(query ? `/product/list?${query}` : "/product/list");
+  };
+
+  const updatePage = (nextPage: number) => {
+    if (nextPage < 0 || nextPage >= totalPages || nextPage === currentPage) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (nextPage === 0) {
+      params.delete("page");
+    } else {
+      params.set("page", String(nextPage));
+    }
+    const query = params.toString();
+    router.push(query ? `/product/list?${query}` : "/product/list");
   };
 
   const formatVnd = (value: number | undefined) => {
@@ -123,7 +154,7 @@ function ProductListContent() {
           <div className="flex items-center gap-3">
              <div className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-600 flex items-center gap-2 shadow-sm">
                 <LayoutGrid className="w-4 h-4 text-blue-600" />
-                <span>{products.length} Sản phẩm</span>
+                  <span>{totalElements || products.length} Sản phẩm</span>
              </div>
              {(q || brandId || categoryId) && (
                <button 
@@ -291,6 +322,16 @@ function ProductListContent() {
                   ))
                 )}
               </div>
+            )}
+
+            {!isLoading && !error && (
+              <Pagination
+                page={currentPage}
+                totalPages={totalPages}
+                totalElements={totalElements}
+                numberOfElements={numberOfElements}
+                onPageChange={updatePage}
+              />
             )}
           </main>
         </div>
