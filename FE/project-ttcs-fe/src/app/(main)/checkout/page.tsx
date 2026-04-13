@@ -50,10 +50,12 @@ function CheckoutForm() {
     setIsLoading(true);
     setError(null);
 
-    // Map cart items to DTO expected by backend
+    // Đổi payload orderDetails sang dạng backend cần: product: { id }, quantity, unitPrice.
+    // fix tạo đơn lỗi do sai cấu trúc dữ liệu
     const orderDetails = cart.map((item) => ({
-      productId: item.id,
+      product: { id: item.id },
       quantity: item.quantity,
+      unitPrice: item.product.price || 0,
     }));
 
     try {
