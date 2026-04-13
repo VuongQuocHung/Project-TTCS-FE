@@ -11,9 +11,31 @@ function getApiBaseUrl(): string {
   return envUrl && envUrl.trim().length > 0 ? envUrl : DEFAULT_BASE_URL;
 }
 
+// readAuthToken ưu tiên auth.token, fallback đọc auth.user.token rồi ghi lại auth.token.
+// Mục đích: giảm lỗi thiếu Bearer token gây 403.
 function readAuthToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem("auth.token");
+
+  const directToken = localStorage.getItem("auth.token");
+  if (directToken && directToken.trim().length > 0) {
+    return directToken;
+  }
+
+  // Backward-compatible fallback for sessions that only stored auth.user.
+  const savedUser = localStorage.getItem("auth.user");
+  if (!savedUser) return null;
+
+  try {
+    const parsed = JSON.parse(savedUser) as { token?: unknown };
+    if (typeof parsed.token === "string" && parsed.token.trim().length > 0) {
+      localStorage.setItem("auth.token", parsed.token);
+      return parsed.token;
+    }
+  } catch {
+    // Ignore parse errors and treat as unauthenticated.
+  }
+
+  return null;
 }
 
 export function writeAuthToken(token: string | null) {

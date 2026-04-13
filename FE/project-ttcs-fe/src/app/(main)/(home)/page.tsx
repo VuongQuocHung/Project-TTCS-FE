@@ -88,7 +88,12 @@ export default function HomePage() {
         {/* CATEGORY GRID */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
           {categories.slice(0, 3).map((c) => (
-            <div key={c.id} className="group bg-white p-8 rounded-2xl border border-slate-200 cursor-pointer shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 flex items-center gap-6">
+            // Category card đổi sang Link, click vào chuyển tới list theo categoryId.
+            <Link
+              key={c.id}
+              href={c.id ? `/product/list?categoryId=${c.id}` : "/product/list"}
+              className="group bg-white p-8 rounded-2xl border border-slate-200 cursor-pointer shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 flex items-center gap-6"
+            >
               <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                  <Layers className="w-6 h-6" />
               </div>
@@ -96,7 +101,7 @@ export default function HomePage() {
                 <p className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{c.name}</p>
                 <p className="text-sm text-slate-500 line-clamp-1">{c.description || "Khám phá ngay"}</p>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
 
