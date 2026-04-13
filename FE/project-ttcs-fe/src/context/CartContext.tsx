@@ -22,23 +22,25 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    if (typeof window === "undefined") return [];
-    const savedCart = localStorage.getItem("cart");
+  const [cart, setCart] = useState<CartItem[]>([]); // ds sản phẩm trong giỏ hàng
+  const [hasLoadedCart, setHasLoadedCart] = useState(false);
+
+  useEffect(() => {
+    const savedCart = localStorage.getItem("cart"); // Lấy giỏ hàng đã lưu trong localStorage
     if (savedCart) {
       try {
-        return JSON.parse(savedCart);
-      } catch (e) {
+        setCart(JSON.parse(savedCart));
+      } catch {
         localStorage.removeItem("cart");
       }
     }
-    return [];
-  });
+    setHasLoadedCart(true);
+  }, []);
 
-  // Save cart to localStorage
   useEffect(() => {
+    if (!hasLoadedCart) return;
     localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart]);
+  }, [cart, hasLoadedCart]);
 
   const addToCart = (product: Product, quantity = 1) => {
     if (!product.id) return;
