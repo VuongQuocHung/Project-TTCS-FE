@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { writeAuthToken } from "@/lib/api";
 import { AuthResponse } from "@/types/api";
 
@@ -11,22 +11,28 @@ interface AuthContextType {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined); // Khởi tạo với undefined để dễ dàng kiểm tra nếu context không được cung cấp
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthResponse | null>(() => {
-    if (typeof window === "undefined") return null;
-    const savedUser = localStorage.getItem("auth.user");
-    if (savedUser) {
-      try {
-        return JSON.parse(savedUser);
-      } catch (e) {
-        localStorage.removeItem("auth.user");
+  const [user, setUser] = useState<AuthResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+      const savedUser = localStorage.getItem("auth.user"); // Lấy thông tin user đã lưu trong localStorage
+      if (savedUser) {
+        try {
+          const parsedUser = JSON.parse(savedUser) as AuthResponse;
+          setUser(parsedUser);
+          // Nếu có token, thiết lập token cho các yêu cầu API, tránh lỗi 401 khi reload trang
+          if (parsedUser?.token) {
+            writeAuthToken(parsedUser.token);
+          }
+        } catch {
+          localStorage.removeItem("auth.user");
+        }
       }
-    }
-    return null;
-  });
-  const [isLoading] = useState(false);
+      setIsLoading(false);
+    }, []);
 
   const login = (userData: AuthResponse) => {
     setUser(userData);
@@ -39,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem("auth.user");
-    writeAuthToken(null);
+    writeAuthToken(null); // Xóa token khỏi cấu hình API khi đăng xuất
   };
 
   return (
