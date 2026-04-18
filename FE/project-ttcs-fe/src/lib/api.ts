@@ -42,7 +42,7 @@ export async function apiFetch<T>(
   const url = path.startsWith("http") ? path : `${getApiBaseUrl()}${path}`;
 
   const headers = new Headers(options?.headers);
-  if (!headers.has("Content-Type") && options?.body) {
+  if (!headers.has("Content-Type") && options?.body && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -70,7 +70,7 @@ export async function apiFetch<T>(
 
     const message =
       (typeof firstFieldError === "string" && firstFieldError) ||
-      (typeof data === "object" && data && "message" in data && (data as any).message) ||
+      (typeof data === "object" && data !== null && "message" in data && typeof (data as Record<string, unknown>).message === "string" ? (data as Record<string, string>).message : null) ||
       res.statusText ||
       "Request failed";
 
@@ -86,67 +86,21 @@ export async function apiFetch<T>(
   return data as T;
 }
 
-export type AuthResponse = {
-  token: string;
-  tokenType: string;
-  email: string;
-  fullName: string;
-  role: string;
+export const apiClient = {
+  GET: <T>(url: string, options?: RequestInit & { auth?: boolean }) =>
+    apiFetch<T>(url, { ...options, method: "GET" }),
+  POST: <T>(url: string, body?: unknown, options?: RequestInit & { auth?: boolean }) =>
+    apiFetch<T>(url, {
+      ...options,
+      method: "POST",
+      body: body instanceof FormData ? body : (body ? JSON.stringify(body) : undefined),
+    }),
+  PUT: <T>(url: string, body?: unknown, options?: RequestInit & { auth?: boolean }) =>
+    apiFetch<T>(url, {
+      ...options,
+      method: "PUT",
+      body: body ? JSON.stringify(body) : undefined,
+    }),
+  DELETE: <T>(url: string, options?: RequestInit & { auth?: boolean }) =>
+    apiFetch<T>(url, { ...options, method: "DELETE" }),
 };
-
-export type LoginRequest = {
-  email: string;
-  password: string;
-};
-
-export type RegisterRequest = {
-  fullName: string;
-  email: string;
-  phone: string;
-  password: string;
-};
-
-export async function login(payload: LoginRequest): Promise<AuthResponse> {
-  return apiFetch<AuthResponse>("/api/auth/login", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function register(payload: RegisterRequest): Promise<AuthResponse> {
-  return apiFetch<AuthResponse>("/api/auth/register", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-export type ProductImage = {
-  id: number;
-  imageUrl: string;
-  isPrimary?: boolean | null;
-};
-
-export type ProductSpecification = {
-  cpu?: string | null;
-  ram?: string | null;
-  storage?: string | null;
-  vga?: string | null;
-  screen?: string | null;
-  os?: string | null;
-  battery?: string | null;
-  weight?: string | null;
-};
-
-export type Product = {
-  id: number;
-  name: string;
-  price: number; // BigDecimal serialized as number or string; normalize at runtime
-  stock?: number;
-  description?: string | null;
-  images?: ProductImage[];
-  specification?: ProductSpecification | null;
-};
-
-export async function getProducts(): Promise<Product[]> {
-  return apiFetch<Product[]>("/api/products", { method: "GET" });
-}
