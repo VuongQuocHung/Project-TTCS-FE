@@ -24,7 +24,9 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const isAdmin = user?.role === "ROLE_ADMIN" || user?.role === "ADMIN";
+
+  const resolvedRole = user?.role ?? user?.user?.role?.name;
+  const isAdmin = resolvedRole === "ROLE_ADMIN" || resolvedRole === "ADMIN";
 
   if (!user || !isAdmin) {
     return (

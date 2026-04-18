@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { writeAuthToken } from "@/lib/api";
+import { resolveTokenFromAuthPayload, writeAuthToken } from "@/lib/api";
 import { AuthResponse } from "@/types/api";
 
 interface AuthContextType {
@@ -13,6 +13,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined); // Khởi tạo với undefined để dễ dàng kiểm tra nếu context không được cung cấp
 
+function normalizeAuthUser(data: AuthResponse): AuthResponse {
+  const roleFromNestedUser = data.user?.role?.name;
+  const resolvedRole = typeof data.role === "string" ? data.role : roleFromNestedUser;
+  const resolvedToken = resolveTokenFromAuthPayload(data);
+
+  return {
+    ...data,
+    role: resolvedRole,
+    token: resolvedToken ?? data.token,
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,24 +34,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (savedUser) {
         try {
           const parsedUser = JSON.parse(savedUser) as AuthResponse;
-          setUser(parsedUser);
+          const normalizedUser = normalizeAuthUser(parsedUser);
+          setUser(normalizedUser);
           // Nếu có token, thiết lập token cho các yêu cầu API, tránh lỗi 401 khi reload trang
-          if (parsedUser?.token) {
-            writeAuthToken(parsedUser.token);
-          }
+          writeAuthToken(normalizedUser.token ?? null);
         } catch {
           localStorage.removeItem("auth.user");
+          writeAuthToken(null);
         }
       }
       setIsLoading(false);
     }, []);
 
   const login = (userData: AuthResponse) => {
-    setUser(userData);
-    localStorage.setItem("auth.user", JSON.stringify(userData));
-    if (userData.token) {
-      writeAuthToken(userData.token);
-    }
+    const normalizedUser = normalizeAuthUser(userData);
+    setUser(normalizedUser);
+    localStorage.setItem("auth.user", JSON.stringify(normalizedUser));
+    writeAuthToken(normalizedUser.token ?? null);
   };
 
   const logout = () => {
