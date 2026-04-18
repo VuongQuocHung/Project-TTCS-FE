@@ -11,6 +11,41 @@ function getApiBaseUrl(): string {
   return envUrl && envUrl.trim().length > 0 ? envUrl : DEFAULT_BASE_URL;
 }
 
+const TOKEN_KEYS = ["token", "accessToken", "access_token", "jwt", "jwtToken"] as const;
+
+function normalizeToken(raw: string): string {
+  const trimmed = raw.trim();
+  return trimmed.toLowerCase().startsWith("bearer ") ? trimmed.slice(7).trim() : trimmed;
+}
+
+function readTokenFromRecord(record: Record<string, unknown>): string | null {
+  for (const key of TOKEN_KEYS) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return normalizeToken(value);
+    }
+  }
+  return null;
+}
+
+export function resolveTokenFromAuthPayload(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+
+  const record = payload as Record<string, unknown>;
+  const directToken = readTokenFromRecord(record);
+  if (directToken) return directToken;
+
+  const nestedCandidates = [record.data, record.auth, record.user];
+  for (const candidate of nestedCandidates) {
+    if (candidate && typeof candidate === "object") {
+      const nestedToken = readTokenFromRecord(candidate as Record<string, unknown>);
+      if (nestedToken) return nestedToken;
+    }
+  }
+
+  return null;
+}
+
 // readAuthToken ưu tiên auth.token, fallback đọc auth.user.token rồi ghi lại auth.token.
 // Mục đích: giảm lỗi thiếu Bearer token gây 403.
 function readAuthToken(): string | null {
@@ -18,7 +53,7 @@ function readAuthToken(): string | null {
 
   const directToken = localStorage.getItem("auth.token");
   if (directToken && directToken.trim().length > 0) {
-    return directToken;
+    return normalizeToken(directToken);
   }
 
   // Backward-compatible fallback for sessions that only stored auth.user.
@@ -26,10 +61,11 @@ function readAuthToken(): string | null {
   if (!savedUser) return null;
 
   try {
-    const parsed = JSON.parse(savedUser) as { token?: unknown };
-    if (typeof parsed.token === "string" && parsed.token.trim().length > 0) {
-      localStorage.setItem("auth.token", parsed.token);
-      return parsed.token;
+    const parsed = JSON.parse(savedUser) as unknown;
+    const fallbackToken = resolveTokenFromAuthPayload(parsed);
+    if (fallbackToken) {
+      localStorage.setItem("auth.token", fallbackToken);
+      return fallbackToken;
     }
   } catch {
     // Ignore parse errors and treat as unauthenticated.
@@ -44,7 +80,7 @@ export function writeAuthToken(token: string | null) {
     localStorage.removeItem("auth.token");
     return;
   }
-  localStorage.setItem("auth.token", token);
+  localStorage.setItem("auth.token", normalizeToken(token));
 }
 
 async function safeParseJson(text: string): Promise<unknown> {

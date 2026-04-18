@@ -101,10 +101,13 @@ export interface RegisterRequest {
 
 export interface AuthResponse {
   token?: string;
+  accessToken?: string;
+  access_token?: string;
   tokenType?: string;
   email?: string;
   fullName?: string;
   role?: string;
+  user?: User;
 }
 
 export interface LoginRequest {
