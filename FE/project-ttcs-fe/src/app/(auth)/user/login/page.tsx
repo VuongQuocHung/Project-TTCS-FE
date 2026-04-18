@@ -1,12 +1,14 @@
 "use client";
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, Suspense } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple, FaFacebook } from "react-icons/fa";
-import { writeAuthToken, type ApiError } from "@/lib/api";
+import { type ApiError } from "@/lib/api";
 import { authApi } from "@/lib/api-endpoints";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { GoogleLogin } from "@react-oauth/google";
+import type { AuthResponse } from "@/types/api";
 
 export default function UserLoginPage() {
   return (
@@ -25,8 +27,17 @@ function UserLoginContent() {
   const searchParams = useSearchParams();
   const { login: authLogin } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  const handleLoginSuccess = (res: AuthResponse) => {
+    authLogin(res);
+    setSuccess(`Đăng nhập thành công: ${res.fullName}`);
+
+    const callbackUrl = searchParams.get("callbackUrl");
+    router.push(callbackUrl ? decodeURIComponent(callbackUrl) : "/");
+  };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -46,20 +57,30 @@ function UserLoginContent() {
     }
 
     setIsLoading(true);
+    setIsGoogleLoading(false);
     authApi.login({ email, password })
-      .then((res) => {
-        authLogin(res);
-        setSuccess(`Đăng nhập thành công: ${res.fullName}`);
-        
-        // Redirect to callbackUrl if present, otherwise home
-        const callbackUrl = searchParams.get("callbackUrl");
-        router.push(callbackUrl ? decodeURIComponent(callbackUrl) : "/");
-      })
+      .then(handleLoginSuccess)
       .catch((e: ApiError) => {
         setError(e?.message || "Đăng nhập thất bại");
       })
       .finally(() => setIsLoading(false));
   };
+
+  const handleGoogleLogin = (idToken: string) => {
+    setError(null);
+    setSuccess(null);
+    setIsGoogleLoading(true);
+
+    authApi.googleLogin({ idToken })
+      .then(handleLoginSuccess)
+      .catch((e: ApiError) => {
+        setError(e?.message || "Đăng nhập Google thất bại");
+      })
+      .finally(() => setIsGoogleLoading(false));
+  };
+
+  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const socialDisabled = isLoading || isGoogleLoading;
 
   return (
     <div className="py-[60px]">
@@ -150,7 +171,7 @@ function UserLoginContent() {
               <div>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || isGoogleLoading}
                   className="bg-[#0088FF] hover:bg-[#006FD6] active:bg-[#005BBF] 
                   rounded-[4px] w-full h-[48px] px-[20px] font-[700] text-[15px] 
                   text-white flex items-center justify-center gap-[8px] mt-[4px] disabled:opacity-70"
@@ -173,9 +194,37 @@ function UserLoginContent() {
             </div>
 
             <div className="flex justify-center gap-[10px]">
-              <button type="button">
-                <FcGoogle size={30} />
-              </button>
+              {googleClientId ? (
+                <div className={socialDisabled ? "pointer-events-none opacity-60" : ""}>
+                  <GoogleLogin
+                    onSuccess={(credentialResponse) => {
+                      const idToken = credentialResponse.credential;
+                      if (!idToken) {
+                        setError("Không lấy được Google ID token. Vui lòng thử lại.");
+                        return;
+                      }
+                      handleGoogleLogin(idToken);
+                    }}
+                    onError={() => {
+                      setError("Đăng nhập Google thất bại");
+                    }}
+                    text="signin_with"
+                    shape="pill"
+                    theme="outline"
+                    size="large"
+                    useOneTap={false}
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title="Thiếu NEXT_PUBLIC_GOOGLE_CLIENT_ID"
+                  className="opacity-50 cursor-not-allowed"
+                >
+                  <FcGoogle size={30} />
+                </button>
+              )}
               <button type="button">
                 <FaApple size={30} />
               </button>
