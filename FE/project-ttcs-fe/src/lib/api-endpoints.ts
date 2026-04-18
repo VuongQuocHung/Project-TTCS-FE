@@ -2,6 +2,7 @@ import { apiClient } from "./api";
 import {
   AuthResponse,
   LoginRequest,
+  GoogleLoginRequest,
   RegisterRequest,
   ForgotPasswordRequest,
   ResetPasswordRequest,
@@ -53,6 +54,7 @@ const toQueryString = (params?: Record<string, unknown>): string => {
 
 export const authApi = {
   login: (data: LoginRequest) => apiClient.POST<AuthResponse>("/api/auth/login", data),
+  googleLogin: (data: GoogleLoginRequest) => apiClient.POST<AuthResponse>("/api/auth/google", data),
   register: (data: RegisterRequest) => apiClient.POST<AuthResponse>("/api/auth/register", data),
   logout: () => apiClient.POST<string>("/api/auth/logout"),
   forgotPassword: (data: ForgotPasswordRequest) => apiClient.POST<string>("/api/auth/forgot-password", data),
