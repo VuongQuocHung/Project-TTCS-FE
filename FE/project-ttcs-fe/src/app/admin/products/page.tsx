@@ -130,10 +130,6 @@ export default function AdminProductsPage() {
             }
         }
     }
-    // If not a file, it might be a text URL.
-    // We let the default behavior happen (it will be pasted into the input).
-    // But we need to update our state if the user pastes a URL.
-    // We'll handle this via the onChange of the input.
   };
 
   const handleDrop = async (e: React.DragEvent) => {
