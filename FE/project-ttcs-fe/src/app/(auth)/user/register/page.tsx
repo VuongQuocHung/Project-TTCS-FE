@@ -21,20 +21,21 @@ export default function UserRegisterPage() {
     const formData = new FormData(form);
 
     const fullName = String(formData.get("fullName") ?? "").trim();
+    const username = String(formData.get("username") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
     const phone = String(formData.get("phone") ?? "").trim();
     const password = String(formData.get("password") ?? "");
 
-    if (!fullName || !email || !phone || !password) {
+    if (!fullName || !username || !email || !phone || !password) {
       setError("Vui lòng nhập đầy đủ thông tin.");
       return;
     }
 
     setIsLoading(true);
-    authApi.register({ fullName, email, phone, password })
+    authApi.register({ fullName, username, email, phone, password })
       .then((res) => {
-        setSuccess(`Đăng ký thành công: ${res.fullName}`);
-        router.push("/user/login");
+        setSuccess(`Đăng ký thành công. Đang chuyển hướng...`);
+        setTimeout(() => router.push("/user/login"), 2000);
       })
       .catch((e: ApiError) => {
         setError(e?.message || "Đăng ký thất bại");
@@ -85,6 +86,20 @@ export default function UserRegisterPage() {
                   name="fullName"
                   autoComplete="name"
                   placeholder="Nguyễn Văn A"
+                  className="w-full border border-[#DEDEDE] rounded-[6px] px-[12px] py-[10px] text-[14px]"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="username" className="block font-[500] text-[13px] text-black mb-[6px]">
+                  Tên đăng nhập *
+                </label>
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  autoComplete="username"
+                  placeholder="nguyenvana"
                   className="w-full border border-[#DEDEDE] rounded-[6px] px-[12px] py-[10px] text-[14px]"
                 />
               </div>

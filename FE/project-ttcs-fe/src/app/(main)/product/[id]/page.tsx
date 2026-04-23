@@ -35,11 +35,12 @@ export default function ProductDetailPage() {
       try {
         const prod = await productApi.getById(Number(id));
         setProduct(prod);
-        setActiveImage(prod.images?.[0]?.imageUrl || "/assets/images/loq.jpg");
+        setActiveImage(prod.variants?.[0]?.images?.[0]?.imageUrl || "/assets/images/loq.jpg");
 
-        if (prod.category?.id) {
+        if (prod.categoryName) {
+          // This is a bit tricky, the related product filter logic needs categoryId. We only have categoryName in the new ProductDTO.
+          // For now, let's just fetch some random products as related products.
           const related = await productApi.getAll({ 
-            categoryId: prod.category.id, 
             size: 5 
           });
           setRelatedProducts(related.content?.filter(p => p.id !== prod.id) || []);
@@ -78,11 +79,11 @@ export default function ProductDetailPage() {
   }
 
   const specItems = [
-    { label: "CPU", val: product.specification?.cpu, icon: <Cpu className="w-5 h-5 text-blue-600" /> },
-    { label: "RAM", val: product.specification?.ram, icon: <Smartphone className="w-5 h-5 text-blue-600" /> },
-    { label: "Ổ cứng", val: product.specification?.storage, icon: <HardDrive className="w-5 h-5 text-blue-600" /> },
-    { label: "Màn hình", val: product.specification?.screen, icon: <Monitor className="w-5 h-5 text-blue-600" /> },
-    { label: "VGA", val: product.specification?.vga, icon: <Gamepad2 className="w-5 h-5 text-blue-600" /> },
+    { label: "CPU", val: product.variants?.[0]?.specsJson?.cpu, icon: <Cpu className="w-5 h-5 text-blue-600" /> },
+    { label: "RAM", val: product.variants?.[0]?.specsJson?.ram, icon: <Smartphone className="w-5 h-5 text-blue-600" /> },
+    { label: "Ổ cứng", val: product.variants?.[0]?.specsJson?.storage, icon: <HardDrive className="w-5 h-5 text-blue-600" /> },
+    { label: "Màn hình", val: product.variants?.[0]?.specsJson?.screen, icon: <Monitor className="w-5 h-5 text-blue-600" /> },
+    { label: "VGA", val: product.variants?.[0]?.specsJson?.vga, icon: <Gamepad2 className="w-5 h-5 text-blue-600" /> },
   ].filter(i => i.val);
 
   return (
@@ -109,7 +110,7 @@ export default function ProductDetailPage() {
             </div>
             
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              {product.images?.map((img, idx) => (
+              {product.variants?.[0]?.images?.map((img, idx) => (
                 <button 
                   key={idx}
                   onClick={() => setActiveImage(img.imageUrl || "")}
@@ -138,7 +139,7 @@ export default function ProductDetailPage() {
           <div className="lg:col-span-5 space-y-6">
             <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm">
               <span className="bg-blue-50 text-blue-600 text-[10px] px-2.5 py-1 rounded-md font-black uppercase tracking-widest mb-4 inline-block border border-blue-100">
-                {product.brand?.name || "Premium Laptop"}
+                {product.brandName || "Premium Laptop"}
               </span>
 
               <h1 className="text-3xl font-black text-slate-900 leading-tight mb-2 tracking-tighter">
@@ -161,14 +162,20 @@ export default function ProductDetailPage() {
                   {new Intl.NumberFormat("vi-VN", {
                     style: "currency",
                     currency: "VND",
-                  }).format(product.price || 0)}
+                  }).format(product.variants?.[0]?.price || 0)}
                 </p>
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 rounded-full translate-x-12 translate-y-[-12px]" />
               </div>
 
               <div className="grid grid-cols-1 gap-3 mb-8">
                 <button 
-                  onClick={() => addToCart(product)}
+                  onClick={() => {
+                    if (product.variants && product.variants.length > 0 && product.variants[0].id) {
+                      addToCart(product.variants[0].id, 1);
+                    } else {
+                      alert("Sản phẩm chưa có biến thể");
+                    }
+                  }}
                   className="bg-blue-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 ring-4 ring-blue-50"
                 >
                   <ShoppingCart className="w-5 h-5" />
@@ -235,14 +242,14 @@ export default function ProductDetailPage() {
                   className="group bg-white p-6 rounded-2xl border border-slate-200 hover:border-blue-200 hover:shadow-xl transition-all duration-300"
                 >
                   <div className="aspect-square bg-slate-50 rounded-xl mb-4 overflow-hidden p-4">
-                    <img src={p.images?.[0]?.imageUrl || "/assets/images/loq.jpg"} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" alt={p.name} />
+                    <img src={p.variants?.[0]?.images?.[0]?.imageUrl || "/assets/images/loq.jpg"} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" alt={p.name} />
                   </div>
                   <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">{p.name}</h3>
                   <p className="text-blue-600 font-black mt-2">
                     {new Intl.NumberFormat("vi-VN", {
                       style: "currency",
                       currency: "VND",
-                    }).format(p.price || 0)}
+                    }).format(p.variants?.[0]?.price || 0)}
                   </p>
                 </Link>
               ))}

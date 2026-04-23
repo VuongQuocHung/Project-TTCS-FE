@@ -5,13 +5,14 @@ export interface Role {
 
 export interface User {
   id?: number;
+  username?: string;
   email?: string;
   fullName?: string;
-  phone?: string;
+  phoneNumber?: string;
+  address?: string;
   role?: Role;
-  createdAt?: string;
-  resetToken?: string;
-  resetTokenExpiry?: string;
+  branchId?: number;
+  enabled?: boolean;
 }
 
 export interface Brand {
@@ -26,17 +27,31 @@ export interface Category {
   description?: string;
 }
 
+export interface Inventory {
+  id?: number;
+  branchId?: number;
+  branchName?: string;
+  quantity?: number;
+}
+
+export interface ProductVariant {
+  id?: number;
+  sku?: string;
+  price?: number;
+  color?: string;
+  specsJson?: Record<string, any>;
+  quantity?: number;
+  inventories?: Inventory[];
+  images?: ProductImage[];
+}
+
 export interface Product {
   id?: number;
   name?: string;
-  price?: number;
-  importPrice?: number;
-  stock?: number;
   description?: string;
-  brand?: Brand;
-  category?: Category;
-  images?: ProductImage[];
-  specification?: ProductSpecification;
+  categoryName?: string;
+  brandName?: string;
+  variants?: ProductVariant[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -47,44 +62,34 @@ export interface ProductImage {
   isPrimary?: boolean;
 }
 
-export interface ProductSpecification {
-  id?: number;
-  cpu?: string;
-  ram?: string;
-  storage?: string;
-  vga?: string;
-  screen?: string;
-  os?: string;
-  battery?: string;
-  weight?: string;
-}
-
 export interface Review {
   id?: number;
-  product?: Product;
-  user?: User;
+  productId?: number;
+  username?: string;
+  fullName?: string;
   rating?: number;
-  comment?: string;
+  content?: string;
   createdAt?: string;
+}
+
+export interface OrderItem {
+  id?: number;
+  productName?: string;
+  variantColor?: string;
+  quantity?: number;
+  unitPrice?: number;
 }
 
 export interface Order {
   id?: number;
-  user?: User;
-  orderDate?: string;
-  status?: "PENDING" | "APPROVED" | "CANCELLED" | "DELIVERED";
-  totalAmount?: number;
-  shippingAddress?: string;
-  phoneNumber?: string;
-  orderDetails?: OrderDetail[];
-  updatedAt?: string;
-}
-
-export interface OrderDetail {
-  id?: number;
-  product?: Product;
-  quantity?: number;
-  unitPrice?: number;
+  userId?: number;
+  branchId?: number;
+  status?: string;
+  totalPrice?: number;
+  discountAmount?: number;
+  voucherCode?: string;
+  createdAt?: string;
+  items?: OrderItem[];
 }
 
 export interface ResetPasswordRequest {
@@ -97,6 +102,7 @@ export interface RegisterRequest {
   email: string;
   phone: string;
   password: string;
+  username: string;
 }
 
 export interface AuthResponse {
@@ -104,14 +110,13 @@ export interface AuthResponse {
   accessToken?: string;
   access_token?: string;
   tokenType?: string;
-  email?: string;
-  fullName?: string;
+  username?: string;
   role?: string;
-  user?: User;
+  user?: User; // kept for legacy compat if needed
 }
 
 export interface LoginRequest {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -126,7 +131,6 @@ export interface ForgotPasswordRequest {
 export interface ChangePasswordRequest {
   oldPassword: string;
   newPassword: string;
-  confirmPassword: string;
 }
 
 export interface SortObject {
@@ -144,89 +148,21 @@ export interface PageableObject {
   unpaged?: boolean;
 }
 
-export interface PageUser {
+export interface PageResponse<T> {
+  content?: T[];
+  pageNo?: number;
+  pageSize?: number;
   totalElements?: number;
   totalPages?: number;
-  pageable?: PageableObject;
-  size?: number;
-  content?: User[];
-  number?: number;
-  sort?: SortObject;
-  first?: boolean;
   last?: boolean;
-  numberOfElements?: number;
-  empty?: boolean;
 }
 
-export interface PageReview {
-  totalElements?: number;
-  totalPages?: number;
-  pageable?: PageableObject;
-  size?: number;
-  content?: Review[];
-  number?: number;
-  sort?: SortObject;
-  first?: boolean;
-  last?: boolean;
-  numberOfElements?: number;
-  empty?: boolean;
-}
-
-export interface PageProduct {
-  totalElements?: number;
-  totalPages?: number;
-  pageable?: PageableObject;
-  size?: number;
-  content?: Product[];
-  number?: number;
-  sort?: SortObject;
-  first?: boolean;
-  last?: boolean;
-  numberOfElements?: number;
-  empty?: boolean;
-}
-
-export interface PageOrder {
-  totalElements?: number;
-  totalPages?: number;
-  pageable?: PageableObject;
-  size?: number;
-  content?: Order[];
-  number?: number;
-  sort?: SortObject;
-  first?: boolean;
-  last?: boolean;
-  numberOfElements?: number;
-  empty?: boolean;
-}
-
-export interface PageCategory {
-  totalElements?: number;
-  totalPages?: number;
-  pageable?: PageableObject;
-  size?: number;
-  content?: Category[];
-  number?: number;
-  sort?: SortObject;
-  first?: boolean;
-  last?: boolean;
-  numberOfElements?: number;
-  empty?: boolean;
-}
-
-export interface PageBrand {
-  totalElements?: number;
-  totalPages?: number;
-  pageable?: PageableObject;
-  size?: number;
-  content?: Brand[];
-  number?: number;
-  sort?: SortObject;
-  first?: boolean;
-  last?: boolean;
-  numberOfElements?: number;
-  empty?: boolean;
-}
+export type PageUser = PageResponse<User>;
+export type PageReview = PageResponse<Review>;
+export type PageProduct = PageResponse<Product>;
+export type PageOrder = PageResponse<Order>;
+export type PageCategory = PageResponse<Category>;
+export type PageBrand = PageResponse<Brand>;
 
 export interface QueryParams {
   page?: number;
@@ -237,43 +173,46 @@ export interface QueryParams {
 }
 
 export interface ProductQueryParams extends QueryParams {
-  name?: string;
-  brandId?: number;
+  keyword?: string;
   categoryId?: number;
+  brandId?: number;
   minPrice?: number;
   maxPrice?: number;
-  cpu?: string[];
-  ram?: string[];
-  storage?: string[];
-  vga?: string[];
-  screen?: string[];
+  cpu?: string;
+  ram?: string;
+  storage?: string;
 }
 
 export interface OrderQueryParams extends QueryParams {
   status?: "PENDING" | "APPROVED" | "CANCELLED" | "DELIVERED";
   userId?: number;
-  phoneNumber?: string;
-  minAmount?: number;
-  maxAmount?: number;
+  branchId?: number;
 }
 
 export interface UserQueryParams extends QueryParams {
-  email?: string;
-  fullName?: string;
-  phone?: string;
-  roleId?: number;
 }
 
 export interface ReviewQueryParams extends QueryParams {
-  productId?: number;
-  userId?: number;
-  rating?: number;
 }
 
 export interface CategoryQueryParams extends QueryParams {
-  name?: string;
 }
 
 export interface BrandQueryParams extends QueryParams {
-  name?: string;
 }
+
+export interface CartItem {
+  id?: number;
+  variantId?: number;
+  productName?: string;
+  variantSku?: string;
+  quantity?: number;
+  price?: number;
+  snapshotPrice?: number;
+}
+
+export interface Cart {
+  items?: CartItem[];
+  totalPrice?: number;
+}
+

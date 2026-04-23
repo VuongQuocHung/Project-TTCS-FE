@@ -76,9 +76,8 @@ export default function AdminOrdersPage() {
 
   const filteredOrders = orders.filter(o => {
     const matchesFilter = filter === "ALL" || o.status === filter;
-    const matchesSearch = o.shippingAddress?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          o.id?.toString().includes(searchTerm) ||
-                          o.phoneNumber?.includes(searchTerm);
+    const matchesSearch = o.id?.toString().includes(searchTerm) ||
+                          o.userId?.toString().includes(searchTerm);
     return matchesFilter && matchesSearch;
   });
 
@@ -161,20 +160,20 @@ export default function AdminOrdersPage() {
                   <tr key={order.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-6 py-6 font-black text-slate-900">#VPH-{order.id}</td>
                     <td className="px-6 py-6">
-                       <p className="text-sm font-bold text-slate-900">{order.user?.fullName || "Khách hàng lẻ"}</p>
-                       <p className="text-xs text-slate-400">{order.phoneNumber}</p>
+                       <p className="text-sm font-bold text-slate-900">Người dùng: #{order.userId}</p>
+                       <p className="text-xs text-slate-400">Chi nhánh: {order.branchId}</p>
                     </td>
                     <td className="px-6 py-6 max-w-[200px]">
                        <div className="flex items-start gap-2">
                           <MapPin className="w-4 h-4 text-slate-300 mt-0.5" />
-                          <p className="text-xs font-medium text-slate-500 leading-relaxed truncate" title={order.shippingAddress}>
-                            {order.shippingAddress}
+                          <p className="text-xs font-medium text-slate-500 leading-relaxed truncate" title={"Đang cập nhật"}>
+                            Đang cập nhật
                           </p>
                        </div>
                        <div className="flex items-center gap-2 mt-1">
                           <Clock className="w-4 h-4 text-slate-300" />
                           <p className="text-[10px] font-bold text-slate-400">
-                            {order.orderDate ? new Date(order.orderDate).toLocaleDateString("vi-VN") : "---"}
+                            {order.createdAt ? new Date(order.createdAt).toLocaleDateString("vi-VN") : "---"}
                           </p>
                        </div>
                     </td>
@@ -189,7 +188,7 @@ export default function AdminOrdersPage() {
                         {new Intl.NumberFormat("vi-VN", {
                           style: "currency",
                           currency: "VND",
-                        }).format(order.totalAmount || 0)}
+                        }).format(order.totalPrice || 0)}
                        </p>
                     </td>
                     <td className="px-6 py-6">

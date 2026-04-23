@@ -48,17 +48,29 @@ export function resolveTokenFromAuthPayload(payload: unknown): string | null {
   return null;
 }
 
-// readAuthToken ưu tiên auth.token, fallback đọc auth.user.token rồi ghi lại auth.token.
-// Mục đích: giảm lỗi thiếu Bearer token gây 403.
+// ─── Module-level in-memory token ───────────────────────────────────────────
+// AuthContext gọi setMemoryToken() sau mỗi login/logout/hydration.
+// readAuthToken() ưu tiên biến này để tránh race condition với localStorage.
+let _memoryToken: string | null = null;
+
+export function setMemoryToken(token: string | null): void {
+  _memoryToken = token ? normalizeToken(token) : null;
+}
+
 function readAuthToken(): string | null {
+  // 1. Ưu tiên in-memory (luôn đồng bộ, không có timing issue)
+  if (_memoryToken && _memoryToken.trim().length > 0) return _memoryToken;
+
+  // 2. Fallback: localStorage (cho trường hợp page reload trước khi AuthContext set)
   if (typeof window === "undefined") return null;
 
-  const directToken = localStorage.getItem("auth.token");
-  if (directToken && directToken.trim().length > 0) {
-    return normalizeToken(directToken);
+  const direct = localStorage.getItem("auth.token");
+  if (direct && direct.trim().length > 0) {
+    _memoryToken = normalizeToken(direct); // sync vào memory
+    return _memoryToken;
   }
 
-  // Backward-compatible fallback for sessions that only stored auth.user.
+  // 3. Backward-compat: đọc từ auth.user nếu auth.token chưa được ghi
   const savedUser = localStorage.getItem("auth.user");
   if (!savedUser) return null;
 
@@ -66,24 +78,28 @@ function readAuthToken(): string | null {
     const parsed = JSON.parse(savedUser) as unknown;
     const fallbackToken = resolveTokenFromAuthPayload(parsed);
     if (fallbackToken) {
+      _memoryToken = fallbackToken;
       localStorage.setItem("auth.token", fallbackToken);
       return fallbackToken;
     }
   } catch {
-    // Ignore parse errors and treat as unauthenticated.
+    // bỏ qua lỗi parse
   }
 
   return null;
 }
 
-export function writeAuthToken(token: string | null) {
+export function writeAuthToken(token: string | null): void {
+  const normalized = token ? normalizeToken(token) : null;
+  _memoryToken = normalized; // luôn cập nhật memory trước
   if (typeof window === "undefined") return;
-  if (!token) {
+  if (normalized) {
+    localStorage.setItem("auth.token", normalized);
+  } else {
     localStorage.removeItem("auth.token");
-    return;
   }
-  localStorage.setItem("auth.token", normalizeToken(token));
 }
+
 
 async function safeParseJson(text: string): Promise<unknown> {
   try {

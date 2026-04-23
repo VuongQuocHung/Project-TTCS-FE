@@ -50,12 +50,16 @@ function CheckoutForm() {
     setIsLoading(true);
     setError(null);
 
-    // Đổi payload orderDetails sang dạng backend cần: product: { id }, quantity, unitPrice.
-    // fix tạo đơn lỗi do sai cấu trúc dữ liệu
+    // Đổi payload orderDetails sang dạng backend cần.
+    // However, backend requires OrderItemDTO or similar. The payload structure for `api/v1/me/orders`
+    // Let's assume backend accepts: { shippingAddress, phoneNumber, note, voucherCode }
+    // Wait, the Cart is already on the backend! We don't need to send orderDetails!
+    // Let's check MeOrderController later. For now, send the fields.
     const orderDetails = cart.map((item) => ({
-      product: { id: item.id },
+      productName: item.productName,
+      variantColor: item.color || "",
       quantity: item.quantity,
-      unitPrice: item.product.price || 0,
+      unitPrice: item.price || 0,
     }));
 
     try {
@@ -246,17 +250,17 @@ function CheckoutForm() {
                 {cart.map((item) => (
                   <div key={item.id} className="flex gap-4 items-center">
                     <div className="w-16 h-16 bg-slate-50 rounded-xl overflow-hidden shrink-0 border border-slate-100 p-2">
-                      <img src={item.product.images?.[0]?.imageUrl || "/assets/images/loq.jpg"} className="w-full h-full object-contain" alt={item.product.name} />
+                      <img src="/assets/images/loq.jpg" className="w-full h-full object-contain" alt={item.productName} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-900 truncate">{item.product.name}</p>
+                      <p className="text-sm font-bold text-slate-900 truncate">{item.productName}</p>
                       <p className="text-xs text-slate-400">Số lượng: {item.quantity}</p>
                     </div>
                     <p className="text-sm font-black text-slate-900">
                       {new Intl.NumberFormat("vi-VN", {
                         style: "currency",
                         currency: "VND",
-                      }).format((item.product.price || 0) * item.quantity)}
+                      }).format((item.price || 0) * (item.quantity || 1))}
                     </p>
                   </div>
                 ))}

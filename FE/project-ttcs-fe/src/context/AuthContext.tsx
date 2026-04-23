@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { resolveTokenFromAuthPayload, writeAuthToken } from "@/lib/api";
+import { resolveTokenFromAuthPayload, writeAuthToken, setMemoryToken } from "@/lib/api";
 import { AuthResponse } from "@/types/api";
 
 interface AuthContextType {
@@ -36,10 +36,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const parsedUser = JSON.parse(savedUser) as AuthResponse;
           const normalizedUser = normalizeAuthUser(parsedUser);
           setUser(normalizedUser);
-          // Nếu có token, thiết lập token cho các yêu cầu API, tránh lỗi 401 khi reload trang
-          writeAuthToken(normalizedUser.token ?? null);
+          // Đồng bộ token vào memory TRƯỚC, localStorage sau
+          const token = normalizedUser.token ?? null;
+          setMemoryToken(token);
+          writeAuthToken(token);
         } catch {
           localStorage.removeItem("auth.user");
+          setMemoryToken(null);
           writeAuthToken(null);
         }
       }
@@ -50,13 +53,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const normalizedUser = normalizeAuthUser(userData);
     setUser(normalizedUser);
     localStorage.setItem("auth.user", JSON.stringify(normalizedUser));
-    writeAuthToken(normalizedUser.token ?? null);
+    const token = normalizedUser.token ?? null;
+    setMemoryToken(token); // memory first — instant, no timing gap
+    writeAuthToken(token);
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem("auth.user");
-    writeAuthToken(null); // Xóa token khỏi cấu hình API khi đăng xuất
+    setMemoryToken(null); // xoá memory
+    writeAuthToken(null); // xoá localStorage
   };
 
   return (
