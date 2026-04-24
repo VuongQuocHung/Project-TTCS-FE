@@ -20,6 +20,8 @@ import Link from "next/link";
 import { categoryApi, brandApi } from "@/lib/api-endpoints";
 import { Category, Brand } from "@/types/api";
 import { Pagination } from "@/app/components/common/Pagination";
+import { getSpecValue } from "@/lib/format";
+import type { ApiError } from "@/lib/api";
 
 function ProductListContent() {
   const { addToCart } = useCart();
@@ -46,11 +48,12 @@ function ProductListContent() {
 
   useEffect(() => {
     let isMounted = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     setError(null);
 
     const params: ProductQueryParams = {
-      name: q || undefined,
+      keyword: q || undefined,
       brandId: brandId ? Number(brandId) : undefined,
       categoryId: categoryId ? Number(categoryId) : undefined,
       page: currentPage,
@@ -65,9 +68,10 @@ function ProductListContent() {
         setTotalElements(res.totalElements || 0);
         setNumberOfElements(res.content?.length || 0);
       })
-      .catch((e: any) => {
+      .catch((e: unknown) => {
         if (!isMounted) return;
-        setError(e?.message || "Không tải được danh sách sản phẩm");
+        const apiError = e as ApiError;
+        setError(apiError?.message || "Không tải được danh sách sản phẩm");
         setProducts([]);
         setTotalPages(0);
         setTotalElements(0);
@@ -288,14 +292,14 @@ function ProductListContent() {
                       </h3>
 
                       <div className="flex flex-wrap gap-1.5 mb-6">
-                        {p.variants?.[0]?.specsJson?.cpu && (
+                        {getSpecValue(p, "cpu") && (
                           <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 lowercase">
-                            {p.variants[0].specsJson.cpu.split(' ').slice(0, 2).join(' ')}
+                            {getSpecValue(p, "cpu").split(" ").slice(0, 2).join(" ")}
                           </span>
                         )}
-                        {p.variants?.[0]?.specsJson?.ram && (
+                        {getSpecValue(p, "ram") && (
                           <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 uppercase">
-                            {p.variants[0].specsJson.ram}
+                            {getSpecValue(p, "ram")}
                           </span>
                         )}
                       </div>

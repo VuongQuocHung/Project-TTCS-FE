@@ -23,16 +23,31 @@ export default function UserRegisterPage() {
     const fullName = String(formData.get("fullName") ?? "").trim();
     const username = String(formData.get("username") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
-    const phone = String(formData.get("phone") ?? "").trim();
+    const phoneNumber = String(formData.get("phoneNumber") ?? "").trim();
+    const address = String(formData.get("address") ?? "").trim();
     const password = String(formData.get("password") ?? "");
+    const confirmPassword = String(formData.get("confirmPassword") ?? "");
 
-    if (!fullName || !username || !email || !phone || !password) {
+    if (!fullName || !username || !email || !phoneNumber || !password || !confirmPassword) {
       setError("Vui lòng nhập đầy đủ thông tin.");
       return;
     }
 
+    if (password !== confirmPassword) {
+      setError("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+
     setIsLoading(true);
-    authApi.register({ fullName, username, email, phone, password })
+    authApi.register({
+      fullName,
+      username,
+      email,
+      phoneNumber,
+      address: address || undefined,
+      password,
+      confirmPassword,
+    })
       .then((res) => {
         setSuccess(`Đăng ký thành công. Đang chuyển hướng...`);
         setTimeout(() => router.push("/user/login"), 2000);
@@ -119,15 +134,29 @@ export default function UserRegisterPage() {
               </div>
 
               <div>
-                <label htmlFor="phone" className="block font-[500] text-[13px] text-black mb-[6px]">
+                <label htmlFor="phoneNumber" className="block font-[500] text-[13px] text-black mb-[6px]">
                   Số điện thoại *
                 </label>
                 <input
                   type="tel"
-                  id="phone"
-                  name="phone"
+                  id="phoneNumber"
+                  name="phoneNumber"
                   autoComplete="tel"
                   placeholder="0xxxxxxxxx"
+                  className="w-full border border-[#DEDEDE] rounded-[6px] px-[12px] py-[10px] text-[14px]"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="address" className="block font-[500] text-[13px] text-black mb-[6px]">
+                  Địa chỉ
+                </label>
+                <input
+                  type="text"
+                  id="address"
+                  name="address"
+                  autoComplete="street-address"
+                  placeholder="Số nhà, đường, quận/huyện..."
                   className="w-full border border-[#DEDEDE] rounded-[6px] px-[12px] py-[10px] text-[14px]"
                 />
               </div>
@@ -140,6 +169,20 @@ export default function UserRegisterPage() {
                   type="password"
                   id="password"
                   name="password"
+                  autoComplete="new-password"
+                  placeholder="********"
+                  className="w-full border border-[#DEDEDE] rounded-[6px] px-[12px] py-[10px] text-[14px]"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="confirmPassword" className="block font-[500] text-[13px] text-black mb-[6px]">
+                  Xác nhận mật khẩu *
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
                   autoComplete="new-password"
                   placeholder="********"
                   className="w-full border border-[#DEDEDE] rounded-[6px] px-[12px] py-[10px] text-[14px]"

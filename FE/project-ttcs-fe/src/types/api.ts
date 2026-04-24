@@ -1,7 +1,19 @@
-export interface Role {
-  id?: number;
-  name?: string;
-}
+export type Role = "GUEST" | "CUSTOMER" | "MANAGER" | "ADMIN";
+
+export type OrderStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "SHIPPING"
+  | "DELIVERED"
+  | "CANCELLED"
+  | "FAILED";
+
+export type PaymentMethod = "COD" | "VNPAY" | "MOMO" | "STRIPE";
+
+export type FulfillmentStatus =
+  | "FULLY_AVAILABLE"
+  | "PARTIALLY_AVAILABLE"
+  | "UNAVAILABLE";
 
 export interface User {
   id?: number;
@@ -10,15 +22,23 @@ export interface User {
   fullName?: string;
   phoneNumber?: string;
   address?: string;
-  role?: Role;
+  role?: Role | string;
   branchId?: number;
   enabled?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SessionUser extends User {
+  token?: string;
+  refreshToken?: string;
 }
 
 export interface Brand {
   id?: number;
   name?: string;
-  logoUrl?: string;
+  logo?: string;
+  description?: string;
 }
 
 export interface Category {
@@ -27,11 +47,22 @@ export interface Category {
   description?: string;
 }
 
-export interface Inventory {
+export interface Branch {
   id?: number;
+  name?: string;
+  address?: string;
+  phone?: string;
+}
+
+export interface Inventory {
   branchId?: number;
   branchName?: string;
   quantity?: number;
+}
+
+export interface ProductImage {
+  id?: number;
+  imageUrl?: string;
 }
 
 export interface ProductVariant {
@@ -39,7 +70,7 @@ export interface ProductVariant {
   sku?: string;
   price?: number;
   color?: string;
-  specsJson?: Record<string, any>;
+  specsJson?: Record<string, unknown>;
   quantity?: number;
   inventories?: Inventory[];
   images?: ProductImage[];
@@ -52,14 +83,6 @@ export interface Product {
   categoryName?: string;
   brandName?: string;
   variants?: ProductVariant[];
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface ProductImage {
-  id?: number;
-  imageUrl?: string;
-  isPrimary?: boolean;
 }
 
 export interface Review {
@@ -74,17 +97,18 @@ export interface Review {
 
 export interface OrderItem {
   id?: number;
+  variantId?: number;
   productName?: string;
-  variantColor?: string;
+  sku?: string;
   quantity?: number;
-  unitPrice?: number;
+  price?: number;
 }
 
 export interface Order {
   id?: number;
   userId?: number;
   branchId?: number;
-  status?: string;
+  status?: OrderStatus | string;
   totalPrice?: number;
   discountAmount?: number;
   voucherCode?: string;
@@ -98,21 +122,21 @@ export interface ResetPasswordRequest {
 }
 
 export interface RegisterRequest {
-  fullName?: string;
-  email: string;
-  phone: string;
-  password: string;
   username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  fullName?: string;
+  phoneNumber?: string;
+  address?: string;
 }
 
 export interface AuthResponse {
   token?: string;
-  accessToken?: string;
-  access_token?: string;
-  tokenType?: string;
+  refreshToken?: string;
   username?: string;
-  role?: string;
-  user?: User; // kept for legacy compat if needed
+  role?: Role | string;
+  user?: User;
 }
 
 export interface LoginRequest {
@@ -131,6 +155,16 @@ export interface ForgotPasswordRequest {
 export interface ChangePasswordRequest {
   oldPassword: string;
   newPassword: string;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface UpdateProfileRequest {
+  fullName?: string;
+  phoneNumber?: string;
+  address?: string;
 }
 
 export interface SortObject {
@@ -157,7 +191,6 @@ export interface PageResponse<T> {
   last?: boolean;
 }
 
-export type PageUser = PageResponse<User>;
 export type PageReview = PageResponse<Review>;
 export type PageProduct = PageResponse<Product>;
 export type PageOrder = PageResponse<Order>;
@@ -184,22 +217,14 @@ export interface ProductQueryParams extends QueryParams {
 }
 
 export interface OrderQueryParams extends QueryParams {
-  status?: "PENDING" | "APPROVED" | "CANCELLED" | "DELIVERED";
+  status?: OrderStatus;
   userId?: number;
   branchId?: number;
 }
 
-export interface UserQueryParams extends QueryParams {
-}
+export type CategoryQueryParams = QueryParams;
 
-export interface ReviewQueryParams extends QueryParams {
-}
-
-export interface CategoryQueryParams extends QueryParams {
-}
-
-export interface BrandQueryParams extends QueryParams {
-}
+export type BrandQueryParams = QueryParams;
 
 export interface CartItem {
   id?: number;
@@ -212,7 +237,56 @@ export interface CartItem {
 }
 
 export interface Cart {
+  id?: number;
   items?: CartItem[];
   totalPrice?: number;
 }
 
+export interface OrderItemRequest {
+  variantId: number;
+  quantity: number;
+}
+
+export interface OrderRequest {
+  branchId: number;
+  items: OrderItemRequest[];
+  voucherCode?: string;
+  paymentMethod?: PaymentMethod;
+}
+
+export interface CartCheckRequest {
+  items: Array<{
+    variantId: number;
+    quantity: number;
+  }>;
+}
+
+export interface ItemFulfillment {
+  variantId?: number;
+  requestedQuantity?: number;
+  availableQuantity?: number;
+  isAvailable?: boolean;
+}
+
+export interface BranchFulfillment extends Branch {
+  branchId?: number;
+  branchName?: string;
+  status?: FulfillmentStatus | string;
+  items?: ItemFulfillment[];
+}
+
+export interface DashboardStats {
+  totalOrders?: number;
+  totalRevenue?: number;
+  successfulOrders?: number;
+  revenueByStatus?: Record<string, number>;
+}
+
+export interface LowStock {
+  branchId?: number;
+  branchName?: string;
+  variantId?: number;
+  sku?: string;
+  productName?: string;
+  quantity?: number;
+}

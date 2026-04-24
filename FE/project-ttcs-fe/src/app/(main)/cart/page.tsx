@@ -111,13 +111,13 @@ export default function CartPage() {
                     {new Intl.NumberFormat("vi-VN", {
                       style: "currency",
                       currency: "VND",
-                    }).format((item.price || 0) * (item.quantity || 1))}
+                    }).format((item.snapshotPrice || item.price || 0) * (item.quantity || 1))}
                   </p>
                   <p className="text-xs text-slate-400 font-medium">
                     {new Intl.NumberFormat("vi-VN", {
                       style: "currency",
                       currency: "VND",
-                    }).format(item.price || 0)} / sản phẩm
+                    }).format(item.snapshotPrice || item.price || 0)} / sản phẩm
                   </p>
                 </div>
               </div>

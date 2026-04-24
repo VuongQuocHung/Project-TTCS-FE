@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { productApi, categoryApi, brandApi, fileApi } from "@/lib/api-endpoints";
-import { Product, Category, Brand, ProductImage, ProductSpecification } from "@/types/api";
+import { Product, Category, Brand } from "@/types/api";
+import { getSpecValue } from "@/lib/format";
 import { 
   Plus, 
   Search, 
@@ -40,15 +41,17 @@ export default function AdminProductsPage() {
 
   const fetchProducts = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      const res = await productApi.getAll({ 
+      const res = await productApi.getAllAdmin({ 
         page, 
         size: 10, 
-        name: searchTerm || undefined 
+        keyword: searchTerm || undefined 
       });
       setProducts(res.content || []);
       setTotalPages(res.totalPages || 0);
     } catch (err: unknown) {
+      console.error("Failed to fetch products:", err);
       const apiError = err as ApiError;
       setError(apiError?.message || "Failed to fetch products");
     } finally {
@@ -96,7 +99,7 @@ export default function AdminProductsPage() {
   
   const openEditModal = (product: Product) => {
     setEditingProduct(product);
-    setImageUrl(product.images?.[0]?.imageUrl || "");
+    setImageUrl(product.variants?.[0]?.images?.[0]?.imageUrl || "");
     setIsModalOpen(true);
   };
 
@@ -145,23 +148,43 @@ export default function AdminProductsPage() {
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
     
-    // Add variants support for creating products when DTO matches
-    // Wait, the backend CreateProduct payload has changed too! It expects List<ProductVariantDTO> variants
-    // The previous code sent { name, price, stock, description, brand: {id}, category: {id}, specification: {...}, images: [...] }
-    // We will just do a best-effort mapping here for UI purposes since we haven't built out variant editing yet.
-    const productData: Partial<Product> = {
+    const selectedCategory = categories.find((category) => String(category.id) === String(formData.get("categoryId")));
+    const selectedBrand = brands.find((brand) => String(brand.id) === String(formData.get("brandId")));
+    const currentVariant = editingProduct?.variants?.[0];
+    const productData: Product = {
+      ...editingProduct,
       name: formData.get("name") as string,
       description: formData.get("description") as string,
-      // For now, these might need to be structured according to the new CreateProductRequest if we want admin to actually save products.
-      // But the task is specifically to fix frontend syncing so it doesn't break.
-      // ...
+      categoryName: selectedCategory?.name ?? editingProduct?.categoryName,
+      brandName: selectedBrand?.name ?? editingProduct?.brandName,
+      variants: currentVariant
+        ? [
+            {
+              ...currentVariant,
+              price: Number(formData.get("price")) || currentVariant.price,
+              quantity: Number(formData.get("stock")) || currentVariant.quantity,
+              specsJson: {
+                ...(currentVariant.specsJson || {}),
+                cpu: formData.get("cpu") as string,
+                ram: formData.get("ram") as string,
+                storage: formData.get("storage") as string,
+                vga: formData.get("vga") as string,
+                screen: formData.get("screen") as string,
+              },
+              images: imageUrl ? [{ imageUrl }, ...(currentVariant.images || []).filter((image) => image.imageUrl !== imageUrl)] : currentVariant.images,
+            },
+          ]
+        : undefined,
     };
 
     try {
       if (editingProduct?.id) {
-        await productApi.update(editingProduct.id, productData as Product);
+        await productApi.update(editingProduct.id, productData);
+        if (editingProduct.variants?.[0]?.id && imageUrl && imageUrl !== editingProduct.variants[0].images?.[0]?.imageUrl) {
+          await productApi.addVariantImage(editingProduct.variants[0].id, imageUrl);
+        }
       } else {
-        await productApi.create(productData as Product);
+        await productApi.create(productData);
       }
       setIsModalOpen(false);
       fetchProducts();
@@ -211,6 +234,13 @@ export default function AdminProductsPage() {
           </p>
         </div>
       </div>
+
+      {error && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5" />
+          <p className="font-medium">{error}</p>
+        </div>
+      )}
 
       {/* TABLE */}
       <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
@@ -359,13 +389,13 @@ export default function AdminProductsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Danh mục</label>
-                      <select name="categoryId" defaultValue={editingProduct?.category?.id} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                      <select name="categoryId" defaultValue={categories.find(c => c.name === editingProduct?.categoryName)?.id || ""} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Thương hiệu</label>
-                      <select name="brandId" defaultValue={editingProduct?.brand?.id} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                      <select name="brandId" defaultValue={brands.find(b => b.name === editingProduct?.brandName)?.id || ""} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
                         {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                       </select>
                     </div>
@@ -374,11 +404,11 @@ export default function AdminProductsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Giá bán (VND)</label>
-                      <input name="price" type="number" defaultValue={editingProduct?.price} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="price" type="number" defaultValue={editingProduct?.variants?.[0]?.price} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Số lượng tồn</label>
-                      <input name="stock" type="number" defaultValue={editingProduct?.stock} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="stock" type="number" defaultValue={editingProduct?.variants?.[0]?.quantity} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                   </div>
 
@@ -474,28 +504,28 @@ export default function AdminProductsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">CPU</label>
-                      <input name="cpu" defaultValue={editingProduct?.specification?.cpu} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="cpu" defaultValue={getSpecValue(editingProduct, "cpu")} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">RAM</label>
-                      <input name="ram" defaultValue={editingProduct?.specification?.ram} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="ram" defaultValue={getSpecValue(editingProduct, "ram")} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Ổ cứng</label>
-                      <input name="storage" defaultValue={editingProduct?.specification?.storage} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="storage" defaultValue={getSpecValue(editingProduct, "storage")} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Card màn hình</label>
-                      <input name="vga" defaultValue={editingProduct?.specification?.vga} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="vga" defaultValue={getSpecValue(editingProduct, "vga")} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 ml-1">Màn hình</label>
-                    <input name="screen" defaultValue={editingProduct?.specification?.screen} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                    <input name="screen" defaultValue={getSpecValue(editingProduct, "screen")} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                   </div>
 
                   <div className="space-y-2">

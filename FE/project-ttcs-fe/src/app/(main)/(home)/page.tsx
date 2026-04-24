@@ -17,6 +17,7 @@ import { useCart } from "@/context/CartContext";
 import { CountdownTimer } from "@/app/components/common/CountdownTimer";
 import { categoryApi } from "@/lib/api-endpoints";
 import { Category } from "@/types/api";
+import { getSpecValue } from "@/lib/format";
 
 export default function HomePage() {
   const { addToCart } = useCart();
@@ -150,7 +151,9 @@ export default function HomePage() {
                       {p.name}
                     </h3>
                     <p className="text-xs text-slate-500 mb-6 line-clamp-2 min-h-[32px]">
-                      {p.variants?.[0]?.specsJson?.cpu} {p.variants?.[0]?.specsJson?.ram} {p.variants?.[0]?.specsJson?.vga}
+                      {[getSpecValue(p, "cpu"), getSpecValue(p, "ram"), getSpecValue(p, "vga")]
+                        .filter(Boolean)
+                        .join(" ")}
                     </p>
                   </Link>
 

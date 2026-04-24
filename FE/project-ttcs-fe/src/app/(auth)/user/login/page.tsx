@@ -31,8 +31,8 @@ function UserLoginContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleLoginSuccess = (res: AuthResponse) => {
-    authLogin(res);
+  const handleLoginSuccess = async (res: AuthResponse) => {
+    await authLogin(res);
     setSuccess(`Đăng nhập thành công: ${res.username}`);
 
     const callbackUrl = searchParams.get("callbackUrl");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentPropsWithoutRef } from "react";
 import { useParams } from "next/navigation";
 import { productApi } from "@/lib/api-endpoints";
 import { Product } from "@/types/api";
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import Link from "next/link";
+import { getSpecValue } from "@/lib/format";
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -79,11 +80,11 @@ export default function ProductDetailPage() {
   }
 
   const specItems = [
-    { label: "CPU", val: product.variants?.[0]?.specsJson?.cpu, icon: <Cpu className="w-5 h-5 text-blue-600" /> },
-    { label: "RAM", val: product.variants?.[0]?.specsJson?.ram, icon: <Smartphone className="w-5 h-5 text-blue-600" /> },
-    { label: "Ổ cứng", val: product.variants?.[0]?.specsJson?.storage, icon: <HardDrive className="w-5 h-5 text-blue-600" /> },
-    { label: "Màn hình", val: product.variants?.[0]?.specsJson?.screen, icon: <Monitor className="w-5 h-5 text-blue-600" /> },
-    { label: "VGA", val: product.variants?.[0]?.specsJson?.vga, icon: <Gamepad2 className="w-5 h-5 text-blue-600" /> },
+    { label: "CPU", val: getSpecValue(product, "cpu"), icon: <Cpu className="w-5 h-5 text-blue-600" /> },
+    { label: "RAM", val: getSpecValue(product, "ram"), icon: <Smartphone className="w-5 h-5 text-blue-600" /> },
+    { label: "Ổ cứng", val: getSpecValue(product, "storage"), icon: <HardDrive className="w-5 h-5 text-blue-600" /> },
+    { label: "Màn hình", val: getSpecValue(product, "screen"), icon: <Monitor className="w-5 h-5 text-blue-600" /> },
+    { label: "VGA", val: getSpecValue(product, "vga"), icon: <Gamepad2 className="w-5 h-5 text-blue-600" /> },
   ].filter(i => i.val);
 
   return (
@@ -261,7 +262,7 @@ export default function ProductDetailPage() {
   );
 }
 
-function Gamepad2(props: any) {
+function Gamepad2(props: ComponentPropsWithoutRef<"svg">) {
   return (
     <svg
       {...props}

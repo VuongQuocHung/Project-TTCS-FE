@@ -49,7 +49,7 @@ export const MiniCart = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
                   {new Intl.NumberFormat("vi-VN", {
                     style: "currency",
                     currency: "VND",
-                  }).format(item.price || 0)}
+                  }).format(item.snapshotPrice || item.price || 0)}
                 </p>
               </div>
               <button

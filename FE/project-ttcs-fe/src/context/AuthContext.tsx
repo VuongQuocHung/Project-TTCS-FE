@@ -1,72 +1,138 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { resolveTokenFromAuthPayload, writeAuthToken, setMemoryToken } from "@/lib/api";
-import { AuthResponse } from "@/types/api";
+import { resolveTokenFromAuthPayload, setMemoryToken, writeAuthToken } from "@/lib/api";
+import { profileApi } from "@/lib/api-endpoints";
+import type { AuthResponse, SessionUser, User } from "@/types/api";
 
 interface AuthContextType {
-  user: AuthResponse | null;
+  user: SessionUser | null;
   isLoading: boolean;
-  login: (userData: AuthResponse) => void;
+  login: (authData: AuthResponse) => Promise<void>;
   logout: () => void;
+  refreshProfile: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined); // Khởi tạo với undefined để dễ dàng kiểm tra nếu context không được cung cấp
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function normalizeAuthUser(data: AuthResponse): AuthResponse {
-  const roleFromNestedUser = data.user?.role?.name;
-  const resolvedRole = typeof data.role === "string" ? data.role : roleFromNestedUser;
-  const resolvedToken = resolveTokenFromAuthPayload(data);
+function normalizeSessionUser(authData: AuthResponse, profile?: User | null): SessionUser {
+  const token = resolveTokenFromAuthPayload(authData) ?? authData.token ?? undefined;
+  const role = authData.role ?? profile?.role ?? authData.user?.role;
 
   return {
-    ...data,
-    role: resolvedRole,
-    token: resolvedToken ?? data.token,
+    ...profile,
+    ...authData.user,
+    ...authData,
+    username: authData.username ?? profile?.username ?? authData.user?.username,
+    email: profile?.email ?? authData.user?.email,
+    fullName: profile?.fullName ?? authData.user?.fullName,
+    phoneNumber: profile?.phoneNumber ?? authData.user?.phoneNumber,
+    address: profile?.address ?? authData.user?.address,
+    branchId: profile?.branchId ?? authData.user?.branchId,
+    enabled: profile?.enabled ?? authData.user?.enabled,
+    role,
+    token,
   };
 }
 
+function persistUser(user: SessionUser | null) {
+  if (typeof window === "undefined") return;
+
+  if (user) {
+    localStorage.setItem("auth.user", JSON.stringify(user));
+    return;
+  }
+
+  localStorage.removeItem("auth.user");
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthResponse | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-      const savedUser = localStorage.getItem("auth.user"); // Lấy thông tin user đã lưu trong localStorage
-      if (savedUser) {
-        try {
-          const parsedUser = JSON.parse(savedUser) as AuthResponse;
-          const normalizedUser = normalizeAuthUser(parsedUser);
-          setUser(normalizedUser);
-          // Đồng bộ token vào memory TRƯỚC, localStorage sau
-          const token = normalizedUser.token ?? null;
-          setMemoryToken(token);
-          writeAuthToken(token);
-        } catch {
-          localStorage.removeItem("auth.user");
-          setMemoryToken(null);
-          writeAuthToken(null);
+  const hydrateProfile = async (seedUser: SessionUser | null) => {
+    if (!seedUser?.token) return seedUser;
+
+    try {
+      const profile = await profileApi.getProfile();
+      const mergedUser = normalizeSessionUser(seedUser, profile);
+      setUser(mergedUser);
+      persistUser(mergedUser);
+      return mergedUser;
+    } catch {
+      return seedUser;
+    }
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const hydrateAuth = async () => {
+      const savedUser = localStorage.getItem("auth.user");
+
+      if (!savedUser) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const parsedUser = JSON.parse(savedUser) as AuthResponse;
+        const normalizedUser = normalizeSessionUser(parsedUser, parsedUser.user);
+        const token = normalizedUser.token ?? null;
+
+        setMemoryToken(token);
+        writeAuthToken(token);
+
+        if (!isMounted) return;
+        setUser(normalizedUser);
+        await hydrateProfile(normalizedUser);
+      } catch {
+        persistUser(null);
+        setMemoryToken(null);
+        writeAuthToken(null);
+        if (isMounted) {
+          setUser(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
         }
       }
-      setIsLoading(false);
-    }, []);
+    };
 
-  const login = (userData: AuthResponse) => {
-    const normalizedUser = normalizeAuthUser(userData);
-    setUser(normalizedUser);
-    localStorage.setItem("auth.user", JSON.stringify(normalizedUser));
+    void hydrateAuth();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const login = async (authData: AuthResponse) => {
+    const normalizedUser = normalizeSessionUser(authData, authData.user);
     const token = normalizedUser.token ?? null;
-    setMemoryToken(token); // memory first — instant, no timing gap
+
+    setMemoryToken(token);
     writeAuthToken(token);
+    setUser(normalizedUser);
+    persistUser(normalizedUser);
+
+    await hydrateProfile(normalizedUser);
+  };
+
+  const refreshProfile = async () => {
+    if (!user?.token) return;
+    await hydrateProfile(user);
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("auth.user");
-    setMemoryToken(null); // xoá memory
-    writeAuthToken(null); // xoá localStorage
+    persistUser(null);
+    setMemoryToken(null);
+    writeAuthToken(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

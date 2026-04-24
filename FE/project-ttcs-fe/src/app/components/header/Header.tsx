@@ -108,7 +108,9 @@ export const Header = () => {
                 <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
                   <User size={14} />
                 </div>
-                <span className="font-medium max-w-[100px] truncate">{user.fullName || user.email}</span>
+                <span className="font-medium max-w-[100px] truncate">
+                  {user.fullName || user.username || "User"}
+                </span>
                 <ChevronDown size={14} className={`transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 

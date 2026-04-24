@@ -136,7 +136,7 @@ export async function apiFetch<T>(
   if (!res.ok) {
     const fieldErrors =
       typeof data === "object" && data && "fieldErrors" in data
-        ? ((data as any).fieldErrors as Record<string, unknown>)
+        ? (data as { fieldErrors?: Record<string, unknown> }).fieldErrors
         : null;
     const firstFieldError = fieldErrors
       ? Object.values(fieldErrors).find((v) => typeof v === "string" && v.trim().length > 0)
