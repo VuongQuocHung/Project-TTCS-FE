@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { productApi, categoryApi, brandApi, branchApi, fileApi } from "@/lib/api-endpoints";
 import { Product, Category, Brand, Branch, Inventory } from "@/types/api";
 import { getPrimaryImage, getSpecValue } from "@/lib/format";
-import { resolveApiAssetUrl } from "@/lib/api";
+import { normalizeAssetUrl, resolveApiAssetUrl } from "@/lib/api";
 import { 
   Plus, 
   Search, 
@@ -241,7 +241,7 @@ export default function AdminProductsPage() {
         vga: formData.get("vga") as string,
         screen: formData.get("screen") as string,
       },
-      images: imageUrl ? [{ imageUrl }] : currentVariant?.images ?? [],
+      images: imageUrl ? [{ imageUrl: normalizeAssetUrl(imageUrl) }] : currentVariant?.images ?? [],
     };
     const productData: Product = {
       ...editingProduct,
@@ -628,6 +628,7 @@ export default function AdminProductsPage() {
                       name="imageUrl" 
                       value={imageUrl} 
                       onChange={(e) => setImageUrl(e.target.value)}
+                      onBlur={(e) => setImageUrl(normalizeAssetUrl(e.target.value))}
                       onPaste={handlePaste}
                       placeholder="Hoặc dán URL hình ảnh tại đây..." 
                       className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition text-sm" 

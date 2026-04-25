@@ -16,10 +16,26 @@ export function getApiBaseUrl(): string {
 const TOKEN_KEYS = ["token", "accessToken", "access_token", "jwt", "jwtToken"] as const;
 
 export function resolveApiAssetUrl(url?: string | null): string {
-  if (!url) return "";
-  if (url.startsWith("http") || url.startsWith("data:") || url.startsWith("blob:")) return url;
-  if (url.startsWith("/uploads/")) return `${getApiBaseUrl()}${url}`;
-  return url;
+  const normalizedUrl = normalizeAssetUrl(url);
+  if (!normalizedUrl) return "";
+  if (
+    normalizedUrl.startsWith("http") ||
+    normalizedUrl.startsWith("data:") ||
+    normalizedUrl.startsWith("blob:")
+  ) {
+    return normalizedUrl;
+  }
+  if (normalizedUrl.startsWith("/uploads/")) return `${getApiBaseUrl()}${normalizedUrl}`;
+  return normalizedUrl;
+}
+
+export function normalizeAssetUrl(url?: string | null): string {
+  const trimmed = url?.trim() || "";
+  if (!trimmed) return "";
+  if (trimmed.startsWith("ttps://")) return `h${trimmed}`;
+  if (trimmed.startsWith("//")) return `https:${trimmed}`;
+  if (trimmed.startsWith("www.")) return `https://${trimmed}`;
+  return trimmed;
 }
 
 function normalizeToken(raw: string): string {

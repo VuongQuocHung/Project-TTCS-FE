@@ -160,10 +160,6 @@ export default function AdminUsersPage() {
           <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
             Quản lý người dùng
           </h1>
-          <p className="text-slate-500 mt-2 font-medium">
-            Dùng trực tiếp các endpoint `GET /api/v1/admin/users`, cập nhật role,
-            trạng thái và gán chi nhánh theo backend hiện có.
-          </p>
         </div>
       </div>
 
