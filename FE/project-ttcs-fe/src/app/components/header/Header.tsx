@@ -125,7 +125,7 @@ export const Header = () => {
                     <LayoutGrid size={16} />
                     Đơn hàng của tôi
                   </Link>
-                  {user.role === "ADMIN" && (
+                  {(user.role === "ADMIN" || user.role === "MANAGER") && (
                     <Link href="/admin" onClick={() => setIsUserMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition text-sm font-bold">
                        <ShieldAlert size={16} />
                        Quản trị hệ thống

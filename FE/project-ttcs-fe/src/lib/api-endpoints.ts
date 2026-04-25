@@ -1,6 +1,7 @@
 import { apiClient } from "./api";
 import type {
   AuthResponse,
+  AdminUserRequest,
   Brand,
   PageBrand,
   PageCategory,
@@ -191,6 +192,14 @@ export const reviewApi = {
 
 export const userApi = {
   getAll: () => apiClient.GET<User[]>("/api/v1/admin/users", { auth: true }),
+  getById: (id: number) =>
+    apiClient.GET<User>(`/api/v1/admin/users/${id}`, { auth: true }),
+  create: (data: AdminUserRequest) =>
+    apiClient.POST<User>("/api/v1/admin/users", data, { auth: true }),
+  update: (id: number, data: AdminUserRequest) =>
+    apiClient.PUT<User>(`/api/v1/admin/users/${id}`, data, { auth: true }),
+  delete: (id: number) =>
+    apiClient.DELETE(`/api/v1/admin/users/${id}`, { auth: true }),
   assignBranch: (userId: number, branchId: number) =>
     apiClient.POST<User>(
       `/api/v1/admin/users/${userId}/assign-branch/${branchId}`,

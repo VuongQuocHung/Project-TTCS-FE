@@ -14,7 +14,6 @@ import {
   ChevronRight,
   Package,
   Filter,
-  MoreVertical,
   X,
   Check,
   AlertCircle,
@@ -24,6 +23,11 @@ import {
 import { ApiError } from "@/lib/api";
 
 type StockMode = "all" | "custom";
+
+const safeInputValue = (value: unknown): string => {
+  if (value === undefined || value === null) return "";
+  return String(value);
+};
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -41,8 +45,9 @@ export default function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState<string>("");
   const [stockMode, setStockMode] = useState<StockMode>("all");
+  const [allBranchStock, setAllBranchStock] = useState("0");
   const [branchStocks, setBranchStocks] = useState<Record<number, string>>({});
 
   const fetchProducts = async () => {
@@ -103,6 +108,7 @@ export default function AdminProductsPage() {
     setEditingProduct(null);
     setImageUrl("");
     setStockMode("all");
+    setAllBranchStock("0");
     setBranchStocks({});
     setIsModalOpen(true);
   };
@@ -124,6 +130,7 @@ export default function AdminProductsPage() {
     setEditingProduct(product);
     setImageUrl(product.variants?.[0]?.images?.[0]?.imageUrl || "");
     setStockMode(allBranchesHaveSameStock ? "all" : "custom");
+    setAllBranchStock(safeInputValue(getAllBranchStockDefault(product)));
     setBranchStocks(nextBranchStocks);
     setIsModalOpen(true);
   };
@@ -137,7 +144,7 @@ export default function AdminProductsPage() {
     setIsUploading(true);
     try {
       const res = await fileApi.upload(file);
-      setImageUrl(res.url);
+      setImageUrl(normalizeAssetUrl(res.url));
     } catch (err) {
       console.error("Upload failed:", err);
       alert("Tải ảnh thất bại. Vui lòng thử lại!");
@@ -193,15 +200,15 @@ export default function AdminProductsPage() {
       .filter((inventory) => inventory.branchId && Number.isFinite(inventory.quantity) && inventory.quantity >= 0);
   };
 
-  const getAllBranchStockDefault = () => {
-    const inventories = editingProduct?.variants?.[0]?.inventories || [];
+  function getAllBranchStockDefault(product: Product | null = editingProduct): number {
+    const inventories = product?.variants?.[0]?.inventories || [];
     if (inventories.length > 0) {
       const firstQuantity = inventories[0]?.quantity ?? 0;
       const allSame = inventories.every((inventory) => (inventory.quantity ?? 0) === firstQuantity);
       if (allSame) return firstQuantity;
     }
-    return editingProduct?.variants?.[0]?.quantity ?? 0;
-  };
+    return product?.variants?.[0]?.quantity ?? 0;
+  }
 
   const customStockTotal = Object.values(branchStocks).reduce((sum, quantity) => {
     const parsed = Number(quantity);
@@ -457,20 +464,20 @@ export default function AdminProductsPage() {
                   
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 ml-1">Tên sản phẩm</label>
-                    <input name="name" defaultValue={editingProduct?.name} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                    <input name="name" defaultValue={safeInputValue(editingProduct?.name)} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Danh mục</label>
-                      <select name="categoryId" defaultValue={editingProduct?.categoryId || categories.find(c => c.name === editingProduct?.categoryName)?.id || ""} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                      <select name="categoryId" defaultValue={safeInputValue(editingProduct?.categoryId || categories.find(c => c.name === editingProduct?.categoryName)?.id)} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
                         <option value="">Chọn danh mục</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Thương hiệu</label>
-                      <select name="brandId" defaultValue={editingProduct?.brandId || brands.find(b => b.name === editingProduct?.brandName)?.id || ""} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                      <select name="brandId" defaultValue={safeInputValue(editingProduct?.brandId || brands.find(b => b.name === editingProduct?.brandName)?.id)} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
                         <option value="">Chọn thương hiệu</option>
                         {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                       </select>
@@ -480,17 +487,17 @@ export default function AdminProductsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">SKU</label>
-                      <input name="sku" defaultValue={editingProduct?.variants?.[0]?.sku} placeholder="VD: LAPTOP-001" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="sku" defaultValue={safeInputValue(editingProduct?.variants?.[0]?.sku)} placeholder="VD: LAPTOP-001" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Giá bán (VND)</label>
-                      <input name="price" type="number" defaultValue={editingProduct?.variants?.[0]?.price} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="price" type="number" defaultValue={safeInputValue(editingProduct?.variants?.[0]?.price)} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 ml-1">Màu sắc</label>
-                    <input name="color" defaultValue={editingProduct?.variants?.[0]?.color} placeholder="VD: Đen" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                    <input name="color" defaultValue={safeInputValue(editingProduct?.variants?.[0]?.color)} placeholder="VD: Đen" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                   </div>
 
                   <div className="space-y-4">
@@ -516,14 +523,23 @@ export default function AdminProductsPage() {
 
                     {stockMode === "all" ? (
                       <div className="space-y-2">
-                        <input name="stock" type="number" min={0} defaultValue={getAllBranchStockDefault()} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                        <input
+                          key="all-stock-input"
+                          name="stock"
+                          type="number"
+                          min={0}
+                          value={allBranchStock}
+                          onChange={(event) => setAllBranchStock(event.target.value)}
+                          required
+                          className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition"
+                        />
                         <p className="text-xs font-medium text-slate-400">
                           Số lượng này sẽ được áp dụng cho tất cả {branches.length} chi nhánh.
                         </p>
                       </div>
                     ) : (
                       <div className="space-y-3 max-h-56 overflow-y-auto pr-2">
-                        <input type="hidden" name="stock" value={customStockTotal} readOnly />
+                        <input key="custom-stock-total" type="hidden" name="stock" value={customStockTotal} readOnly />
                         {branches.length === 0 ? (
                           <p className="text-sm font-bold text-red-500 bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
                             Chưa có chi nhánh để chọn.
@@ -538,7 +554,7 @@ export default function AdminProductsPage() {
                               <input
                                 type="number"
                                 min={0}
-                                value={branch.id ? branchStocks[branch.id] ?? "" : ""}
+                                value={branch.id ? safeInputValue(branchStocks[branch.id]) : ""}
                                 onChange={(event) => branch.id && updateBranchStock(branch.id, event.target.value)}
                                 placeholder="0"
                                 className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl font-bold outline-none focus:border-blue-600 transition"
@@ -626,7 +642,7 @@ export default function AdminProductsPage() {
 
                     <input 
                       name="imageUrl" 
-                      value={imageUrl} 
+                      value={safeInputValue(imageUrl)}
                       onChange={(e) => setImageUrl(e.target.value)}
                       onBlur={(e) => setImageUrl(normalizeAssetUrl(e.target.value))}
                       onPaste={handlePaste}
@@ -643,33 +659,33 @@ export default function AdminProductsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">CPU</label>
-                      <input name="cpu" defaultValue={getSpecValue(editingProduct, "cpu")} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="cpu" defaultValue={safeInputValue(getSpecValue(editingProduct, "cpu"))} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">RAM</label>
-                      <input name="ram" defaultValue={getSpecValue(editingProduct, "ram")} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="ram" defaultValue={safeInputValue(getSpecValue(editingProduct, "ram"))} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Ổ cứng</label>
-                      <input name="storage" defaultValue={getSpecValue(editingProduct, "storage")} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="storage" defaultValue={safeInputValue(getSpecValue(editingProduct, "storage"))} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Card màn hình</label>
-                      <input name="vga" defaultValue={getSpecValue(editingProduct, "vga")} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="vga" defaultValue={safeInputValue(getSpecValue(editingProduct, "vga"))} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 ml-1">Màn hình</label>
-                    <input name="screen" defaultValue={getSpecValue(editingProduct, "screen")} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                    <input name="screen" defaultValue={safeInputValue(getSpecValue(editingProduct, "screen"))} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 ml-1">Mô tả ngắn</label>
-                    <textarea name="description" defaultValue={editingProduct?.description} rows={4} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition resize-none"></textarea>
+                    <textarea name="description" defaultValue={safeInputValue(editingProduct?.description)} rows={4} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition resize-none"></textarea>
                   </div>
                 </div>
               </div>

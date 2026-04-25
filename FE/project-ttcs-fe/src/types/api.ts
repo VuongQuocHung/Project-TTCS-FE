@@ -29,6 +29,18 @@ export interface User {
   updatedAt?: string;
 }
 
+export interface AdminUserRequest {
+  username: string;
+  email: string;
+  password?: string;
+  fullName?: string;
+  phoneNumber?: string;
+  address?: string;
+  role?: Role | string;
+  branchId?: number | null;
+  enabled?: boolean;
+}
+
 export interface SessionUser extends User {
   token?: string;
   refreshToken?: string;

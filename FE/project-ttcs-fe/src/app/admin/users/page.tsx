@@ -3,18 +3,22 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Building2,
+  Check,
   ChevronLeft,
   ChevronRight,
+  Edit2,
   Mail,
   Phone,
+  Plus,
   Search,
   Shield,
+  Trash2,
   User as UserIcon,
   Users,
+  X,
 } from "lucide-react";
 import { branchApi, userApi } from "@/lib/api-endpoints";
-import { formatCurrency } from "@/lib/format";
-import type { Branch, Role, User } from "@/types/api";
+import type { AdminUserRequest, Branch, Role, User } from "@/types/api";
 import type { ApiError } from "@/lib/api";
 
 const PAGE_SIZE = 10;
@@ -31,6 +35,9 @@ export default function AdminUsersPage() {
   const [actionUserId, setActionUserId] = useState<number | null>(null);
   const [roleDrafts, setRoleDrafts] = useState<Record<number, string>>({});
   const [branchDrafts, setBranchDrafts] = useState<Record<number, string>>({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -140,6 +147,72 @@ export default function AdminUsersPage() {
     }
   };
 
+  const openCreateModal = () => {
+    setEditingUser(null);
+    setError(null);
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (user: User) => {
+    setEditingUser(user);
+    setError(null);
+    setIsModalOpen(true);
+  };
+
+  const handleSubmitUser = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    const formData = new FormData(event.currentTarget);
+    const branchId = Number(formData.get("branchId"));
+    const password = String(formData.get("password") || "");
+    const payload: AdminUserRequest = {
+      username: String(formData.get("username") || "").trim(),
+      email: String(formData.get("email") || "").trim(),
+      password: password.trim() || undefined,
+      fullName: String(formData.get("fullName") || "").trim(),
+      phoneNumber: String(formData.get("phoneNumber") || "").trim(),
+      address: String(formData.get("address") || "").trim(),
+      role: String(formData.get("role") || "CUSTOMER") as Role,
+      branchId: branchId || null,
+      enabled: formData.get("enabled") === "on",
+    };
+
+    try {
+      if (editingUser?.id) {
+        await userApi.update(editingUser.id, payload);
+      } else {
+        await userApi.create(payload);
+      }
+      setIsModalOpen(false);
+      await fetchData();
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError?.message || "Không thể lưu người dùng.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteUser = async (user: User) => {
+    if (!user.id) return;
+    if (!confirm(`Xóa người dùng ${user.username || user.email}?`)) return;
+
+    setActionUserId(user.id);
+    setError(null);
+
+    try {
+      await userApi.delete(user.id);
+      await fetchData();
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError?.message || "Không thể xóa người dùng.");
+    } finally {
+      setActionUserId(null);
+    }
+  };
+
   const getRoleBadgeClasses = (role?: string) => {
     switch (role) {
       case "ADMIN":
@@ -161,6 +234,14 @@ export default function AdminUsersPage() {
             Quản lý người dùng
           </h1>
         </div>
+        <button
+          type="button"
+          onClick={openCreateModal}
+          className="bg-blue-600 text-white px-6 py-3.5 rounded-2xl font-black flex items-center gap-2 hover:bg-blue-700 transition shadow-xl shadow-blue-200"
+        >
+          <Plus className="w-5 h-5" />
+          THÊM NGƯỜI DÙNG
+        </button>
       </div>
 
       <div className="bg-white p-4 rounded-3xl border border-slate-200 flex items-center shadow-sm">
@@ -203,6 +284,9 @@ export default function AdminUsersPage() {
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   Trạng thái
                 </th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
+                  Thao tác
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -224,11 +308,14 @@ export default function AdminUsersPage() {
                     <td className="px-8 py-6">
                       <div className="h-10 bg-slate-100 rounded-xl w-28" />
                     </td>
+                    <td className="px-8 py-6">
+                      <div className="h-10 bg-slate-100 rounded-xl ml-auto w-24" />
+                    </td>
                   </tr>
                 ))
               ) : paginatedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-8 py-20 text-center">
+                  <td colSpan={6} className="px-8 py-20 text-center">
                     <Users className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                     <p className="text-slate-400 font-bold">
                       Không tìm thấy người dùng nào
@@ -354,6 +441,25 @@ export default function AdminUsersPage() {
                           : "Vô hiệu hóa"}
                       </button>
                     </td>
+                    <td className="px-8 py-6 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(user)}
+                          className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition shadow-sm bg-white"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteUser(user)}
+                          disabled={actionUserId === user.id}
+                          className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition shadow-sm bg-white disabled:opacity-60"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
@@ -383,6 +489,105 @@ export default function AdminUsersPage() {
           </div>
         </div>
       </div>
+
+      {isModalOpen ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-[32px] w-full max-w-3xl max-h-[90vh] overflow-hidden shadow-2xl">
+            <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tighter">
+                  {editingUser ? "Cập nhật người dùng" : "Thêm người dùng"}
+                </h2>
+                <p className="text-sm font-medium text-slate-400 mt-1">
+                  Quản lý thông tin tài khoản, vai trò và chi nhánh.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="p-3 hover:bg-slate-100 rounded-2xl transition"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitUser} className="p-8 space-y-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 ml-1">Username</label>
+                  <input name="username" defaultValue={editingUser?.username} required className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 ml-1">Email</label>
+                  <input name="email" type="email" defaultValue={editingUser?.email} required className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 ml-1">
+                    {editingUser ? "Mật khẩu mới" : "Mật khẩu"}
+                  </label>
+                  <input name="password" type="password" required={!editingUser} placeholder={editingUser ? "Bỏ trống nếu không đổi" : ""} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 ml-1">Họ tên</label>
+                  <input name="fullName" defaultValue={editingUser?.fullName} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 ml-1">Số điện thoại</label>
+                  <input name="phoneNumber" defaultValue={editingUser?.phoneNumber} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 ml-1">Vai trò</label>
+                  <select name="role" defaultValue={editingUser?.role || "CUSTOMER"} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                    {ROLE_OPTIONS.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 ml-1">Chi nhánh</label>
+                  <select name="branchId" defaultValue={editingUser?.branchId || ""} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                    <option value="">Không gán</option>
+                    {branches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <label className="flex items-center gap-3 px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700">
+                  <input name="enabled" type="checkbox" defaultChecked={editingUser?.enabled ?? true} className="w-5 h-5 accent-blue-600" />
+                  Đang hoạt động
+                </label>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700 ml-1">Địa chỉ</label>
+                <textarea name="address" defaultValue={editingUser?.address} rows={3} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition resize-none" />
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="flex-1 px-6 py-4 border-2 border-slate-200 rounded-2xl font-black text-slate-400 hover:bg-slate-50 transition"
+                >
+                  HỦY
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex-[2] bg-blue-600 text-white px-6 py-4 rounded-2xl font-black hover:bg-blue-700 transition shadow-xl shadow-blue-100 disabled:opacity-70 flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? "ĐANG LƯU..." : editingUser ? "CẬP NHẬT" : "THÊM NGƯỜI DÙNG"}
+                  {!isSubmitting ? <Check className="w-5 h-5" /> : null}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
