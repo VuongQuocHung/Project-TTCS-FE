@@ -20,7 +20,7 @@ import Link from "next/link";
 import { categoryApi, brandApi } from "@/lib/api-endpoints";
 import { Category, Brand } from "@/types/api";
 import { Pagination } from "@/app/components/common/Pagination";
-import { getSpecValue } from "@/lib/format";
+import { getPrimaryImage, getSpecValue } from "@/lib/format";
 import type { ApiError } from "@/lib/api";
 
 function ProductListContent() {
@@ -277,7 +277,7 @@ function ProductListContent() {
                       <div className="relative aspect-square mb-6 bg-slate-50 rounded-2xl overflow-hidden p-6 shrink-0">
                         <Link href={`/product/${p.id}`}>
                           <img
-                            src={p.variants?.[0]?.images?.[0]?.imageUrl || "/assets/images/loq.jpg"}
+                            src={getPrimaryImage(p)}
                             className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                             alt={p.name}
                           />

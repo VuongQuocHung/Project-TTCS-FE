@@ -20,7 +20,8 @@ import {
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import Link from "next/link";
-import { getSpecValue } from "@/lib/format";
+import { getPrimaryImage, getSpecValue } from "@/lib/format";
+import { resolveApiAssetUrl } from "@/lib/api";
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -36,7 +37,7 @@ export default function ProductDetailPage() {
       try {
         const prod = await productApi.getById(Number(id));
         setProduct(prod);
-        setActiveImage(prod.variants?.[0]?.images?.[0]?.imageUrl || "/assets/images/loq.jpg");
+        setActiveImage(getPrimaryImage(prod));
 
         if (prod.categoryName) {
           // This is a bit tricky, the related product filter logic needs categoryId. We only have categoryName in the new ProductDTO.
@@ -114,12 +115,12 @@ export default function ProductDetailPage() {
               {product.variants?.[0]?.images?.map((img, idx) => (
                 <button 
                   key={idx}
-                  onClick={() => setActiveImage(img.imageUrl || "")}
+                  onClick={() => setActiveImage(resolveApiAssetUrl(img.imageUrl) || "/assets/images/loq.jpg")}
                   className={`w-24 h-24 rounded-2xl border-2 shrink-0 transition-all overflow-hidden bg-white p-2 ${
-                    activeImage === img.imageUrl ? "border-blue-600" : "border-slate-200 hover:border-slate-300 shadow-sm"
+                    activeImage === resolveApiAssetUrl(img.imageUrl) ? "border-blue-600" : "border-slate-200 hover:border-slate-300 shadow-sm"
                   }`}
                 >
-                  <img src={img.imageUrl} className="w-full h-full object-contain" alt={`${product.name} ${idx}`} />
+                  <img src={resolveApiAssetUrl(img.imageUrl)} className="w-full h-full object-contain" alt={`${product.name} ${idx}`} />
                 </button>
               ))}
             </div>
@@ -243,7 +244,7 @@ export default function ProductDetailPage() {
                   className="group bg-white p-6 rounded-2xl border border-slate-200 hover:border-blue-200 hover:shadow-xl transition-all duration-300"
                 >
                   <div className="aspect-square bg-slate-50 rounded-xl mb-4 overflow-hidden p-4">
-                    <img src={p.variants?.[0]?.images?.[0]?.imageUrl || "/assets/images/loq.jpg"} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" alt={p.name} />
+                    <img src={getPrimaryImage(p)} className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" alt={p.name} />
                   </div>
                   <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate">{p.name}</h3>
                   <p className="text-blue-600 font-black mt-2">

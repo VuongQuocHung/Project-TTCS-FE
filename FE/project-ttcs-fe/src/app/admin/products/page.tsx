@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { productApi, categoryApi, brandApi, fileApi } from "@/lib/api-endpoints";
-import { Product, Category, Brand } from "@/types/api";
-import { getSpecValue } from "@/lib/format";
+import { productApi, categoryApi, brandApi, branchApi, fileApi } from "@/lib/api-endpoints";
+import { Product, Category, Brand, Branch, Inventory } from "@/types/api";
+import { getPrimaryImage, getSpecValue } from "@/lib/format";
+import { resolveApiAssetUrl } from "@/lib/api";
 import { 
   Plus, 
   Search, 
@@ -22,10 +23,13 @@ import {
 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 
+type StockMode = "all" | "custom";
+
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -38,6 +42,8 @@ export default function AdminProductsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
+  const [stockMode, setStockMode] = useState<StockMode>("all");
+  const [branchStocks, setBranchStocks] = useState<Record<number, string>>({});
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -61,12 +67,14 @@ export default function AdminProductsPage() {
 
   const fetchMetadata = async () => {
     try {
-      const [catRes, brandRes] = await Promise.all([
+      const [catRes, brandRes, branchRes] = await Promise.all([
         categoryApi.getAll({ size: 100 }),
-        brandApi.getAll({ size: 100 })
+        brandApi.getAll({ size: 100 }),
+        branchApi.getAllAdmin()
       ]);
       setCategories(catRes.content || []);
       setBrands(brandRes.content || []);
+      setBranches(branchRes || []);
     } catch (err) {
       console.error("Failed to fetch metadata:", err);
     }
@@ -94,12 +102,29 @@ export default function AdminProductsPage() {
   const openAddModal = () => {
     setEditingProduct(null);
     setImageUrl("");
+    setStockMode("all");
+    setBranchStocks({});
     setIsModalOpen(true);
   };
   
   const openEditModal = (product: Product) => {
+    const inventories = product.variants?.[0]?.inventories || [];
+    const nextBranchStocks = Object.fromEntries(
+      inventories
+        .filter((inventory) => inventory.branchId)
+        .map((inventory) => [inventory.branchId as number, String(inventory.quantity ?? 0)])
+    );
+    const quantities = inventories.map((inventory) => inventory.quantity ?? 0);
+    const allBranchesHaveSameStock =
+      branches.length > 0 &&
+      inventories.length === branches.length &&
+      quantities.length > 0 &&
+      quantities.every((quantity) => quantity === quantities[0]);
+
     setEditingProduct(product);
     setImageUrl(product.variants?.[0]?.images?.[0]?.imageUrl || "");
+    setStockMode(allBranchesHaveSameStock ? "all" : "custom");
+    setBranchStocks(nextBranchStocks);
     setIsModalOpen(true);
   };
 
@@ -143,6 +168,46 @@ export default function AdminProductsPage() {
     }
   };
 
+  const updateBranchStock = (branchId: number, quantity: string) => {
+    setBranchStocks((current) => ({
+      ...current,
+      [branchId]: quantity,
+    }));
+  };
+
+  const buildInventories = (stockQuantity: number): Inventory[] => {
+    if (stockMode === "all") {
+      return branches.map((branch) => ({
+        branchId: branch.id,
+        branchName: branch.name,
+        quantity: stockQuantity,
+      }));
+    }
+
+    return Object.entries(branchStocks)
+      .map(([branchId, quantity]) => ({
+        branchId: Number(branchId),
+        branchName: branches.find((branch) => branch.id === Number(branchId))?.name,
+        quantity: Number(quantity),
+      }))
+      .filter((inventory) => inventory.branchId && Number.isFinite(inventory.quantity) && inventory.quantity >= 0);
+  };
+
+  const getAllBranchStockDefault = () => {
+    const inventories = editingProduct?.variants?.[0]?.inventories || [];
+    if (inventories.length > 0) {
+      const firstQuantity = inventories[0]?.quantity ?? 0;
+      const allSame = inventories.every((inventory) => (inventory.quantity ?? 0) === firstQuantity);
+      if (allSame) return firstQuantity;
+    }
+    return editingProduct?.variants?.[0]?.quantity ?? 0;
+  };
+
+  const customStockTotal = Object.values(branchStocks).reduce((sum, quantity) => {
+    const parsed = Number(quantity);
+    return Number.isFinite(parsed) ? sum + parsed : sum;
+  }, 0);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -151,38 +216,47 @@ export default function AdminProductsPage() {
     const selectedCategory = categories.find((category) => String(category.id) === String(formData.get("categoryId")));
     const selectedBrand = brands.find((brand) => String(brand.id) === String(formData.get("brandId")));
     const currentVariant = editingProduct?.variants?.[0];
+    const sku = String(formData.get("sku") || "").trim();
+    const stockQuantity = Number(formData.get("stock"));
+    const inventories = buildInventories(stockQuantity);
+
+    if (branches.length > 0 && inventories.length === 0) {
+      alert("Vui lòng chọn ít nhất một chi nhánh tồn kho.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const variant = {
+      ...(currentVariant || {}),
+      sku: sku || currentVariant?.sku || `SP-${Date.now()}`,
+      price: Number(formData.get("price")),
+      color: formData.get("color") as string,
+      quantity: inventories.reduce((sum, inventory) => sum + (inventory.quantity || 0), 0),
+      inventories,
+      specsJson: {
+        ...(currentVariant?.specsJson || {}),
+        cpu: formData.get("cpu") as string,
+        ram: formData.get("ram") as string,
+        storage: formData.get("storage") as string,
+        vga: formData.get("vga") as string,
+        screen: formData.get("screen") as string,
+      },
+      images: imageUrl ? [{ imageUrl }] : currentVariant?.images ?? [],
+    };
     const productData: Product = {
       ...editingProduct,
       name: formData.get("name") as string,
       description: formData.get("description") as string,
+      categoryId: selectedCategory?.id,
       categoryName: selectedCategory?.name ?? editingProduct?.categoryName,
+      brandId: selectedBrand?.id,
       brandName: selectedBrand?.name ?? editingProduct?.brandName,
-      variants: currentVariant
-        ? [
-            {
-              ...currentVariant,
-              price: Number(formData.get("price")) || currentVariant.price,
-              quantity: Number(formData.get("stock")) || currentVariant.quantity,
-              specsJson: {
-                ...(currentVariant.specsJson || {}),
-                cpu: formData.get("cpu") as string,
-                ram: formData.get("ram") as string,
-                storage: formData.get("storage") as string,
-                vga: formData.get("vga") as string,
-                screen: formData.get("screen") as string,
-              },
-              images: imageUrl ? [{ imageUrl }, ...(currentVariant.images || []).filter((image) => image.imageUrl !== imageUrl)] : currentVariant.images,
-            },
-          ]
-        : undefined,
+      variants: [variant],
     };
 
     try {
       if (editingProduct?.id) {
         await productApi.update(editingProduct.id, productData);
-        if (editingProduct.variants?.[0]?.id && imageUrl && imageUrl !== editingProduct.variants[0].images?.[0]?.imageUrl) {
-          await productApi.addVariantImage(editingProduct.variants[0].id, imageUrl);
-        }
       } else {
         await productApi.create(productData);
       }
@@ -280,7 +354,7 @@ export default function AdminProductsPage() {
                       <div className="flex items-center gap-4">
                         <div className="w-14 h-14 bg-slate-50 p-2 rounded-2xl border border-slate-200 shrink-0">
                           <img 
-                            src={p.variants?.[0]?.images?.[0]?.imageUrl || "/assets/images/loq.jpg"} 
+                            src={getPrimaryImage(p)} 
                             className="w-full h-full object-contain" 
                             alt="" 
                           />
@@ -389,13 +463,15 @@ export default function AdminProductsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Danh mục</label>
-                      <select name="categoryId" defaultValue={categories.find(c => c.name === editingProduct?.categoryName)?.id || ""} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                      <select name="categoryId" defaultValue={editingProduct?.categoryId || categories.find(c => c.name === editingProduct?.categoryName)?.id || ""} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                        <option value="">Chọn danh mục</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Thương hiệu</label>
-                      <select name="brandId" defaultValue={brands.find(b => b.name === editingProduct?.brandName)?.id || ""} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                      <select name="brandId" defaultValue={editingProduct?.brandId || brands.find(b => b.name === editingProduct?.brandName)?.id || ""} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                        <option value="">Chọn thương hiệu</option>
                         {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                       </select>
                     </div>
@@ -403,13 +479,75 @@ export default function AdminProductsPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700 ml-1">SKU</label>
+                      <input name="sku" defaultValue={editingProduct?.variants?.[0]?.sku} placeholder="VD: LAPTOP-001" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                    </div>
+                    <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Giá bán (VND)</label>
                       <input name="price" type="number" defaultValue={editingProduct?.variants?.[0]?.price} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700 ml-1">Số lượng tồn</label>
-                      <input name="stock" type="number" defaultValue={editingProduct?.variants?.[0]?.quantity} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 ml-1">Màu sắc</label>
+                    <input name="color" defaultValue={editingProduct?.variants?.[0]?.color} placeholder="VD: Đen" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="text-sm font-bold text-slate-700 ml-1">Tồn kho theo chi nhánh</label>
+                      <div className="flex rounded-2xl bg-slate-100 p-1 text-xs font-black">
+                        <button
+                          type="button"
+                          onClick={() => setStockMode("all")}
+                          className={`px-3 py-2 rounded-xl transition ${stockMode === "all" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"}`}
+                        >
+                          Toàn bộ
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStockMode("custom")}
+                          className={`px-3 py-2 rounded-xl transition ${stockMode === "custom" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"}`}
+                        >
+                          Chọn riêng
+                        </button>
+                      </div>
                     </div>
+
+                    {stockMode === "all" ? (
+                      <div className="space-y-2">
+                        <input name="stock" type="number" min={0} defaultValue={getAllBranchStockDefault()} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                        <p className="text-xs font-medium text-slate-400">
+                          Số lượng này sẽ được áp dụng cho tất cả {branches.length} chi nhánh.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-56 overflow-y-auto pr-2">
+                        <input type="hidden" name="stock" value={customStockTotal} readOnly />
+                        {branches.length === 0 ? (
+                          <p className="text-sm font-bold text-red-500 bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
+                            Chưa có chi nhánh để chọn.
+                          </p>
+                        ) : (
+                          branches.map((branch) => (
+                            <div key={branch.id} className="grid grid-cols-[1fr_130px] gap-3 items-center bg-slate-50 border border-slate-100 rounded-2xl p-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-black text-slate-900 truncate">{branch.name}</p>
+                                <p className="text-xs text-slate-400 truncate">{branch.address || "Chưa có địa chỉ"}</p>
+                              </div>
+                              <input
+                                type="number"
+                                min={0}
+                                value={branch.id ? branchStocks[branch.id] ?? "" : ""}
+                                onChange={(event) => branch.id && updateBranchStock(branch.id, event.target.value)}
+                                placeholder="0"
+                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl font-bold outline-none focus:border-blue-600 transition"
+                              />
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-4">
@@ -433,7 +571,7 @@ export default function AdminProductsPage() {
                     >
                       {imageUrl ? (
                         <div className="relative aspect-video flex items-center justify-center p-4">
-                          <img src={imageUrl} alt="Preview" className="max-h-full max-w-full object-contain rounded-xl shadow-lg" />
+                          <img src={resolveApiAssetUrl(imageUrl)} alt="Preview" className="max-h-full max-w-full object-contain rounded-xl shadow-lg" />
                           <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                             <button 
                               type="button"

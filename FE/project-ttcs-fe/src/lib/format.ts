@@ -1,4 +1,5 @@
 import type { OrderStatus, Product, ProductVariant } from "@/types/api";
+import { resolveApiAssetUrl } from "@/lib/api";
 
 export function formatCurrency(value?: number) {
   return new Intl.NumberFormat("vi-VN", {
@@ -12,7 +13,7 @@ export function getPrimaryVariant(product?: Product | null): ProductVariant | un
 }
 
 export function getPrimaryImage(product?: Product | null) {
-  return getPrimaryVariant(product)?.images?.[0]?.imageUrl || "/assets/images/loq.jpg";
+  return resolveApiAssetUrl(getPrimaryVariant(product)?.images?.[0]?.imageUrl) || "/assets/images/loq.jpg";
 }
 
 export function formatSpecValue(value: unknown): string {

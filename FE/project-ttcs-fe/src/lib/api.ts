@@ -6,7 +6,7 @@ export type ApiError = {
 
 const DEFAULT_BASE_URL = "http://localhost:8080";
 
-function getApiBaseUrl(): string {
+export function getApiBaseUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
   return envUrl && envUrl.trim().length > 0 ? envUrl : DEFAULT_BASE_URL; 
   // Nếu có env → dùng env
@@ -14,6 +14,13 @@ function getApiBaseUrl(): string {
 }
 
 const TOKEN_KEYS = ["token", "accessToken", "access_token", "jwt", "jwtToken"] as const;
+
+export function resolveApiAssetUrl(url?: string | null): string {
+  if (!url) return "";
+  if (url.startsWith("http") || url.startsWith("data:") || url.startsWith("blob:")) return url;
+  if (url.startsWith("/uploads/")) return `${getApiBaseUrl()}${url}`;
+  return url;
+}
 
 function normalizeToken(raw: string): string {
   const trimmed = raw.trim();

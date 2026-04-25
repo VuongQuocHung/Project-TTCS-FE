@@ -17,7 +17,7 @@ import { useCart } from "@/context/CartContext";
 import { CountdownTimer } from "@/app/components/common/CountdownTimer";
 import { categoryApi } from "@/lib/api-endpoints";
 import { Category } from "@/types/api";
-import { getSpecValue } from "@/lib/format";
+import { getPrimaryImage, getSpecValue } from "@/lib/format";
 
 export default function HomePage() {
   const { addToCart } = useCart();
@@ -141,7 +141,7 @@ export default function HomePage() {
                         SALE 20%
                       </span>
                       <img
-                        src={p.variants?.[0]?.images?.[0]?.imageUrl || "/assets/images/loq.jpg"}
+                        src={getPrimaryImage(p)}
                         alt={p.name}
                         className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                       />
@@ -208,7 +208,7 @@ export default function HomePage() {
               >
                 <div className="w-24 h-24 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center">
                   <img 
-                    src={p.variants?.[0]?.images?.[0]?.imageUrl || "/assets/images/loq.jpg"} 
+                    src={getPrimaryImage(p)} 
                     alt={p.name} 
                     className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                   />
