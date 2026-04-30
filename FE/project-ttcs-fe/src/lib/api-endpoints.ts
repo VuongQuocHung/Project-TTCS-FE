@@ -7,6 +7,7 @@ import type {
   PageCategory,
   PageOrder,
   PageProduct,
+  PageVoucher,
   BrandQueryParams,
   Branch,
   BranchFulfillment,
@@ -32,6 +33,7 @@ import type {
   SessionUser,
   UpdateProfileRequest,
   User,
+  Voucher,
 } from "@/types/api";
 
 const toQueryString = (params?: Record<string, unknown>): string => {
@@ -179,6 +181,24 @@ export const orderApi = {
     apiClient.GET<DashboardStats>("/api/v1/admin/orders/dashboard/stats", {
       auth: true,
     }),
+};
+
+export const voucherApi = {
+  getMine: () => apiClient.GET<Voucher[]>("/api/v1/me/vouchers", { auth: true }),
+  validate: (code: string, orderValue: number) =>
+    apiClient.GET<Voucher>(
+      `/api/v1/public/vouchers/validate?code=${encodeURIComponent(code)}&orderValue=${orderValue}`
+    ),
+  getAllAdmin: (params?: { page?: number; size?: number }) =>
+    apiClient.GET<PageVoucher>(`/api/v1/admin/vouchers${toQueryString(params)}`, {
+      auth: true,
+    }),
+  create: (data: Voucher) =>
+    apiClient.POST<Voucher>("/api/v1/admin/vouchers", data, { auth: true }),
+  update: (id: number, data: Voucher) =>
+    apiClient.PUT<Voucher>(`/api/v1/admin/vouchers/${id}`, data, { auth: true }),
+  delete: (id: number) =>
+    apiClient.DELETE(`/api/v1/admin/vouchers/${id}`, { auth: true }),
 };
 
 export const reviewApi = {

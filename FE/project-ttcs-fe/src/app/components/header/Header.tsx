@@ -12,7 +12,8 @@ import {
   LayoutGrid, 
   MapPin, 
   ChevronDown,
-  ShieldAlert
+  ShieldAlert,
+  Ticket
 } from "lucide-react";
 import { MiniCart } from "./MiniCart";
 import { useRouter } from "next/navigation";
@@ -124,6 +125,10 @@ export const Header = () => {
                   <Link href="/user/orders" onClick={() => setIsUserMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-lg transition text-sm">
                     <LayoutGrid size={16} />
                     Đơn hàng của tôi
+                  </Link>
+                  <Link href="/user/vouchers" onClick={() => setIsUserMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 rounded-lg transition text-sm">
+                    <Ticket size={16} />
+                    Voucher của tôi
                   </Link>
                   {(user.role === "ADMIN" || user.role === "MANAGER") && (
                     <Link href="/admin" onClick={() => setIsUserMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition text-sm font-bold">

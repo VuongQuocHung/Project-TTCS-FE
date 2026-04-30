@@ -15,27 +15,30 @@ import {
   ShieldCheck,
   ShoppingBag,
   Store,
+  Ticket,
   User,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
-import { branchApi, orderApi } from "@/lib/api-endpoints";
+import { branchApi, orderApi, voucherApi } from "@/lib/api-endpoints";
 import type { ApiError } from "@/lib/api";
-import type { BranchFulfillment, PaymentMethod } from "@/types/api";
-import { formatCurrency } from "@/lib/format";
+import type { BranchFulfillment, PaymentMethod, Voucher } from "@/types/api";
+import { calculateVoucherDiscount, formatCurrency, formatVoucherValue } from "@/lib/format";
 
 function CheckoutForm() {
-  const router = useRouter();
   const { cart, totalItems, totalPrice, clearCart } = useCart();
   const { user } = useAuth();
   const [branches, setBranches] = useState<BranchFulfillment[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+  const [myVouchers, setMyVouchers] = useState<Voucher[]>([]);
   const [voucherCode, setVoucherCode] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState<Voucher | null>(null);
+  const [voucherMessage, setVoucherMessage] = useState<string | null>(null);
   const [paymentMethod] = useState<PaymentMethod>("COD");
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +52,30 @@ function CheckoutForm() {
         })),
     [cart]
   );
+
+  const voucherDiscount = useMemo(
+    () => calculateVoucherDiscount(appliedVoucher, totalPrice),
+    [appliedVoucher, totalPrice]
+  );
+  const finalTotal = Math.max(totalPrice - voucherDiscount, 0);
+
+  useEffect(() => {
+    const fetchVouchers = async () => {
+      try {
+        const response = await voucherApi.getMine();
+        setMyVouchers(response);
+      } catch {
+        setMyVouchers([]);
+      }
+    };
+
+    void fetchVouchers();
+  }, []);
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("voucher");
+    if (code) setVoucherCode(code);
+  }, []);
 
   useEffect(() => {
     if (orderItems.length === 0) {
@@ -84,6 +111,42 @@ function CheckoutForm() {
   }, [orderItems, user?.branchId]);
 
   const selectedBranch = branches.find((branch) => branch.branchId === selectedBranchId);
+
+  const handleApplyVoucher = async () => {
+    const code = voucherCode.trim().toUpperCase();
+    if (!code) {
+      setAppliedVoucher(null);
+      setVoucherMessage("Vui lòng nhập mã voucher.");
+      return;
+    }
+
+    setIsApplyingVoucher(true);
+    setVoucherMessage(null);
+
+    try {
+      const voucher = await voucherApi.validate(code, totalPrice);
+      if (voucher.status && voucher.status !== "ACTIVE") {
+        setAppliedVoucher(null);
+        setVoucherMessage("Voucher này hiện không còn hoạt động.");
+        return;
+      }
+      if (voucher.minOrderValue && totalPrice < voucher.minOrderValue) {
+        setAppliedVoucher(null);
+        setVoucherMessage(`Đơn hàng cần tối thiểu ${formatCurrency(voucher.minOrderValue)}.`);
+        return;
+      }
+
+      setVoucherCode(voucher.code || code);
+      setAppliedVoucher(voucher);
+      setVoucherMessage("Đã áp dụng voucher.");
+    } catch (err) {
+      const apiError = err as ApiError;
+      setAppliedVoucher(null);
+      setVoucherMessage(apiError?.message || "Voucher không hợp lệ.");
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (orderItems.length === 0 || !selectedBranchId) {
@@ -313,13 +376,63 @@ function CheckoutForm() {
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">
                     Mã giảm giá
                   </label>
-                  <input
-                    type="text"
-                    value={voucherCode}
-                    onChange={(event) => setVoucherCode(event.target.value)}
-                    placeholder="Nhập voucher nếu có"
-                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition"
-                  />
+                  {myVouchers.length > 0 ? (
+                    <select
+                      value={voucherCode}
+                      onChange={(event) => {
+                        setVoucherCode(event.target.value);
+                        setAppliedVoucher(null);
+                        setVoucherMessage(null);
+                      }}
+                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600"
+                    >
+                      <option value="">Chọn voucher của bạn</option>
+                      {myVouchers.map((voucher) => (
+                        <option key={voucher.id || voucher.code} value={voucher.code}>
+                          {voucher.code} - {formatVoucherValue(voucher)}
+                        </option>
+                      ))}
+                    </select>
+                  ) : null}
+
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={voucherCode}
+                      onChange={(event) => {
+                        setVoucherCode(event.target.value);
+                        setAppliedVoucher(null);
+                        setVoucherMessage(null);
+                      }}
+                      placeholder="Nhập voucher nếu có"
+                      className="flex-1 px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyVoucher}
+                      disabled={isApplyingVoucher}
+                      className="px-5 py-3.5 bg-blue-600 text-white rounded-2xl font-black disabled:opacity-60"
+                    >
+                      {isApplyingVoucher ? "Đang áp..." : "Áp mã"}
+                    </button>
+                  </div>
+
+                  {voucherMessage ? (
+                    <p
+                      className={`text-sm font-bold ${
+                        appliedVoucher ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {voucherMessage}
+                    </p>
+                  ) : null}
+
+                  {appliedVoucher ? (
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <Ticket className="w-4 h-4 text-blue-600" />
+                      Giảm dự kiến {formatCurrency(voucherDiscount)}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="p-6 bg-blue-50 border border-blue-100 rounded-3xl space-y-4">
@@ -379,6 +492,18 @@ function CheckoutForm() {
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-500 text-sm">
+                  <span>Voucher:</span>
+                  <span className="font-bold text-slate-900">
+                    {appliedVoucher?.code || "Chưa áp dụng"}
+                  </span>
+                </div>
+                {voucherDiscount > 0 ? (
+                  <div className="flex justify-between text-green-600 text-sm">
+                    <span>Giảm giá:</span>
+                    <span className="font-bold">-{formatCurrency(voucherDiscount)}</span>
+                  </div>
+                ) : null}
+                <div className="flex justify-between text-slate-500 text-sm">
                   <span>Chi nhánh chọn:</span>
                   <span className="font-bold text-slate-900">
                     {selectedBranch?.branchName || selectedBranch?.name || "Chưa chọn"}
@@ -389,7 +514,7 @@ function CheckoutForm() {
               <div className="pt-6 border-t border-slate-100 flex justify-between items-end mb-10">
                 <span className="text-slate-900 font-black">TỔNG CỘNG:</span>
                 <span className="text-4xl font-black text-blue-600 tracking-tighter">
-                  {formatCurrency(totalPrice)}
+                  {formatCurrency(finalTotal)}
                 </span>
               </div>
 
