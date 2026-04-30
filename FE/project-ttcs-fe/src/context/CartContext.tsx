@@ -1,85 +1,120 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { Product } from "@/types/api";
-
-export interface CartItem {
-  id: number;
-  product: Product;
-  quantity: number;
-}
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { cartApi } from "@/lib/api-endpoints";
+import { useAuth } from "./AuthContext";
+import type { Cart, CartItem } from "@/types/api";
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: Product, quantity?: number) => void;
-  removeFromCart: (productId: number) => void;
-  updateQuantity: (productId: number, quantity: number) => void;
-  clearCart: () => void;
+  addToCart: (variantId: number, quantity?: number) => Promise<void>;
+  removeFromCart: (itemId: number) => Promise<void>;
+  updateQuantity: (itemId: number, quantity: number) => Promise<void>;
+  clearCart: () => Promise<void>;
   totalItems: number;
   totalPrice: number;
+  isLoading: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [cart, setCart] = useState<CartItem[]>([]); // ds sản phẩm trong giỏ hàng
-  const [hasLoadedCart, setHasLoadedCart] = useState(false);
+  const [cartData, setCartData] = useState<Cart>({ items: [], totalPrice: 0 });
+  const [isLoading, setIsLoading] = useState(false);
+  const { user, isLoading: authLoading } = useAuth();
 
-  useEffect(() => {
-    const savedCart = localStorage.getItem("cart"); // Lấy giỏ hàng đã lưu trong localStorage
-    if (savedCart) {
-      try {
-        setCart(JSON.parse(savedCart));
-      } catch {
-        localStorage.removeItem("cart");
-      }
-    }
-    setHasLoadedCart(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hasLoadedCart) return;
-    localStorage.setItem("cart", JSON.stringify(cart));
-  }, [cart, hasLoadedCart]);
-
-  const addToCart = (product: Product, quantity = 1) => {
-    if (!product.id) return;
-    setCart((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      }
-      return [...prev, { id: product.id!, product, quantity }];
+  const syncCart = (nextCart?: Cart | null) => {
+    setCartData({
+      id: nextCart?.id,
+      items: nextCart?.items ?? [],
+      totalPrice: nextCart?.totalPrice ?? 0,
     });
   };
 
-  const removeFromCart = (productId: number) => {
-    setCart((prev) => prev.filter((item) => item.id !== productId));
-  };
-
-  const updateQuantity = (productId: number, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(productId);
+  const fetchCart = async () => {
+    if (!user?.token) {
+      syncCart(null);
       return;
     }
-    setCart((prev) =>
-      prev.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
-      )
-    );
+
+    try {
+      setIsLoading(true);
+      const response = await cartApi.getCart();
+      syncCart(response);
+    } catch (error) {
+      console.error("Failed to fetch cart", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const clearCart = () => setCart([]);
+  useEffect(() => {
+    if (authLoading) return;
+    void fetchCart();
+  }, [authLoading, user?.token]);
 
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cart.reduce(
-    (sum, item) => sum + (item.product.price || 0) * item.quantity,
-    0
-  );
+  const addToCart = async (variantId: number, quantity = 1) => {
+    if (!user?.token) {
+      alert("Vui lòng đăng nhập để thêm vào giỏ hàng");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await cartApi.addToCart(variantId, quantity);
+      syncCart(response);
+    } catch (error) {
+      console.error("Failed to add to cart", error);
+      alert("Thêm vào giỏ hàng thất bại");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const removeFromCart = async (itemId: number) => {
+    try {
+      setIsLoading(true);
+      const response = await cartApi.removeFromCart(itemId);
+      syncCart(response);
+    } catch (error) {
+      console.error("Failed to remove from cart", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateQuantity = async (itemId: number, quantity: number) => {
+    if (quantity <= 0) {
+      await removeFromCart(itemId);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await cartApi.updateQuantity(itemId, quantity);
+      syncCart(response);
+    } catch (error) {
+      console.error("Failed to update cart quantity", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const clearCart = async () => {
+    try {
+      setIsLoading(true);
+      await cartApi.clearCart();
+      syncCart(null);
+    } catch (error) {
+      console.error("Failed to clear cart", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const cart = cartData.items ?? [];
+  const totalItems = cart.reduce((sum, item) => sum + (item.quantity ?? 0), 0);
+  const totalPrice = cartData.totalPrice ?? 0;
 
   return (
     <CartContext.Provider
@@ -91,6 +126,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         clearCart,
         totalItems,
         totalPrice,
+        isLoading,
       }}
     >
       {children}

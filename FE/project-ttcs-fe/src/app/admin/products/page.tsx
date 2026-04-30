@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { productApi, categoryApi, brandApi, fileApi } from "@/lib/api-endpoints";
-import { Product, Category, Brand, ProductImage, ProductSpecification } from "@/types/api";
+import { productApi, categoryApi, brandApi, branchApi, fileApi } from "@/lib/api-endpoints";
+import { Product, Category, Brand, Branch, Inventory } from "@/types/api";
+import { getPrimaryImage, getSpecValue } from "@/lib/format";
+import { normalizeAssetUrl, resolveApiAssetUrl } from "@/lib/api";
 import { 
   Plus, 
   Search, 
@@ -12,7 +14,6 @@ import {
   ChevronRight,
   Package,
   Filter,
-  MoreVertical,
   X,
   Check,
   AlertCircle,
@@ -21,10 +22,18 @@ import {
 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 
+type StockMode = "all" | "custom";
+
+const safeInputValue = (value: unknown): string => {
+  if (value === undefined || value === null) return "";
+  return String(value);
+};
+
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,19 +45,24 @@ export default function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState<string>("");
+  const [stockMode, setStockMode] = useState<StockMode>("all");
+  const [allBranchStock, setAllBranchStock] = useState("0");
+  const [branchStocks, setBranchStocks] = useState<Record<number, string>>({});
 
   const fetchProducts = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      const res = await productApi.getAll({ 
+      const res = await productApi.getAllAdmin({ 
         page, 
         size: 10, 
-        name: searchTerm || undefined 
+        keyword: searchTerm || undefined 
       });
       setProducts(res.content || []);
       setTotalPages(res.totalPages || 0);
     } catch (err: unknown) {
+      console.error("Failed to fetch products:", err);
       const apiError = err as ApiError;
       setError(apiError?.message || "Failed to fetch products");
     } finally {
@@ -58,12 +72,14 @@ export default function AdminProductsPage() {
 
   const fetchMetadata = async () => {
     try {
-      const [catRes, brandRes] = await Promise.all([
+      const [catRes, brandRes, branchRes] = await Promise.all([
         categoryApi.getAll({ size: 100 }),
-        brandApi.getAll({ size: 100 })
+        brandApi.getAll({ size: 100 }),
+        branchApi.getAllAdmin()
       ]);
       setCategories(catRes.content || []);
       setBrands(brandRes.content || []);
+      setBranches(branchRes || []);
     } catch (err) {
       console.error("Failed to fetch metadata:", err);
     }
@@ -91,12 +107,31 @@ export default function AdminProductsPage() {
   const openAddModal = () => {
     setEditingProduct(null);
     setImageUrl("");
+    setStockMode("all");
+    setAllBranchStock("0");
+    setBranchStocks({});
     setIsModalOpen(true);
   };
   
   const openEditModal = (product: Product) => {
+    const inventories = product.variants?.[0]?.inventories || [];
+    const nextBranchStocks = Object.fromEntries(
+      inventories
+        .filter((inventory) => inventory.branchId)
+        .map((inventory) => [inventory.branchId as number, String(inventory.quantity ?? 0)])
+    );
+    const quantities = inventories.map((inventory) => inventory.quantity ?? 0);
+    const allBranchesHaveSameStock =
+      branches.length > 0 &&
+      inventories.length === branches.length &&
+      quantities.length > 0 &&
+      quantities.every((quantity) => quantity === quantities[0]);
+
     setEditingProduct(product);
-    setImageUrl(product.images?.[0]?.imageUrl || "");
+    setImageUrl(product.variants?.[0]?.images?.[0]?.imageUrl || "");
+    setStockMode(allBranchesHaveSameStock ? "all" : "custom");
+    setAllBranchStock(safeInputValue(getAllBranchStockDefault(product)));
+    setBranchStocks(nextBranchStocks);
     setIsModalOpen(true);
   };
 
@@ -109,7 +144,7 @@ export default function AdminProductsPage() {
     setIsUploading(true);
     try {
       const res = await fileApi.upload(file);
-      setImageUrl(res.url);
+      setImageUrl(normalizeAssetUrl(res.url));
     } catch (err) {
       console.error("Upload failed:", err);
       alert("Tải ảnh thất bại. Vui lòng thử lại!");
@@ -140,34 +175,97 @@ export default function AdminProductsPage() {
     }
   };
 
+  const updateBranchStock = (branchId: number, quantity: string) => {
+    setBranchStocks((current) => ({
+      ...current,
+      [branchId]: quantity,
+    }));
+  };
+
+  const buildInventories = (stockQuantity: number): Inventory[] => {
+    if (stockMode === "all") {
+      return branches.map((branch) => ({
+        branchId: branch.id,
+        branchName: branch.name,
+        quantity: stockQuantity,
+      }));
+    }
+
+    return Object.entries(branchStocks)
+      .map(([branchId, quantity]) => ({
+        branchId: Number(branchId),
+        branchName: branches.find((branch) => branch.id === Number(branchId))?.name,
+        quantity: Number(quantity),
+      }))
+      .filter((inventory) => inventory.branchId && Number.isFinite(inventory.quantity) && inventory.quantity >= 0);
+  };
+
+  function getAllBranchStockDefault(product: Product | null = editingProduct): number {
+    const inventories = product?.variants?.[0]?.inventories || [];
+    if (inventories.length > 0) {
+      const firstQuantity = inventories[0]?.quantity ?? 0;
+      const allSame = inventories.every((inventory) => (inventory.quantity ?? 0) === firstQuantity);
+      if (allSame) return firstQuantity;
+    }
+    return product?.variants?.[0]?.quantity ?? 0;
+  }
+
+  const customStockTotal = Object.values(branchStocks).reduce((sum, quantity) => {
+    const parsed = Number(quantity);
+    return Number.isFinite(parsed) ? sum + parsed : sum;
+  }, 0);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
     
-    const productData: Partial<Product> = {
-      name: formData.get("name") as string,
+    const selectedCategory = categories.find((category) => String(category.id) === String(formData.get("categoryId")));
+    const selectedBrand = brands.find((brand) => String(brand.id) === String(formData.get("brandId")));
+    const currentVariant = editingProduct?.variants?.[0];
+    const sku = String(formData.get("sku") || "").trim();
+    const stockQuantity = Number(formData.get("stock"));
+    const inventories = buildInventories(stockQuantity);
+
+    if (branches.length > 0 && inventories.length === 0) {
+      alert("Vui lòng chọn ít nhất một chi nhánh tồn kho.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    const variant = {
+      ...(currentVariant || {}),
+      sku: sku || currentVariant?.sku || `SP-${Date.now()}`,
       price: Number(formData.get("price")),
-      importPrice: Number(formData.get("importPrice")),
-      stock: Number(formData.get("stock")),
-      description: formData.get("description") as string,
-      brand: { id: Number(formData.get("brandId")) },
-      category: { id: Number(formData.get("categoryId")) },
-      specification: {
+      color: formData.get("color") as string,
+      quantity: inventories.reduce((sum, inventory) => sum + (inventory.quantity || 0), 0),
+      inventories,
+      specsJson: {
+        ...(currentVariant?.specsJson || {}),
         cpu: formData.get("cpu") as string,
         ram: formData.get("ram") as string,
         storage: formData.get("storage") as string,
         vga: formData.get("vga") as string,
         screen: formData.get("screen") as string,
-      } as ProductSpecification,
-      images: editingProduct?.images || [{ imageUrl: imageUrl || (formData.get("imageUrl") as string), isPrimary: true }]
+      },
+      images: imageUrl ? [{ imageUrl: normalizeAssetUrl(imageUrl) }] : currentVariant?.images ?? [],
+    };
+    const productData: Product = {
+      ...editingProduct,
+      name: formData.get("name") as string,
+      description: formData.get("description") as string,
+      categoryId: selectedCategory?.id,
+      categoryName: selectedCategory?.name ?? editingProduct?.categoryName,
+      brandId: selectedBrand?.id,
+      brandName: selectedBrand?.name ?? editingProduct?.brandName,
+      variants: [variant],
     };
 
     try {
       if (editingProduct?.id) {
-        await productApi.update(editingProduct.id, productData as Product);
+        await productApi.update(editingProduct.id, productData);
       } else {
-        await productApi.create(productData as Product);
+        await productApi.create(productData);
       }
       setIsModalOpen(false);
       fetchProducts();
@@ -218,6 +316,13 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5" />
+          <p className="font-medium">{error}</p>
+        </div>
+      )}
+
       {/* TABLE */}
       <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
@@ -256,7 +361,7 @@ export default function AdminProductsPage() {
                       <div className="flex items-center gap-4">
                         <div className="w-14 h-14 bg-slate-50 p-2 rounded-2xl border border-slate-200 shrink-0">
                           <img 
-                            src={p.images?.[0]?.imageUrl || "/assets/images/loq.jpg"} 
+                            src={getPrimaryImage(p)} 
                             className="w-full h-full object-contain" 
                             alt="" 
                           />
@@ -264,25 +369,25 @@ export default function AdminProductsPage() {
                         <div className="min-w-0">
                           <p className="font-bold text-slate-900 truncate max-w-[200px]">{p.name}</p>
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 inline-block px-1.5 py-0.5 rounded mt-1">
-                            {p.brand?.name}
+                            {p.brandName}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-6">
                       <span className="text-sm font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                        {p.category?.name}
+                        {p.categoryName}
                       </span>
                     </td>
                     <td className="px-6 py-6">
                       <p className="font-black text-blue-600 text-lg tracking-tighter">
-                        {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(p.price || 0)}
+                        {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(p.variants?.[0]?.price || 0)}
                       </p>
                     </td>
                     <td className="px-6 py-6">
                       <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${Number(p.stock) > 5 ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
-                        <span className="font-bold text-slate-900">{p.stock}</span>
+                        <div className={`w-2 h-2 rounded-full ${Number(p.variants?.[0]?.quantity) > 5 ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
+                        <span className="font-bold text-slate-900">{p.variants?.[0]?.quantity || 0}</span>
                       </div>
                     </td>
                     <td className="px-8 py-6 text-right">
@@ -359,19 +464,21 @@ export default function AdminProductsPage() {
                   
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 ml-1">Tên sản phẩm</label>
-                    <input name="name" defaultValue={editingProduct?.name} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                    <input name="name" defaultValue={safeInputValue(editingProduct?.name)} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Danh mục</label>
-                      <select name="categoryId" defaultValue={editingProduct?.category?.id} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                      <select name="categoryId" defaultValue={safeInputValue(editingProduct?.categoryId || categories.find(c => c.name === editingProduct?.categoryName)?.id)} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                        <option value="">Chọn danh mục</option>
                         {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Thương hiệu</label>
-                      <select name="brandId" defaultValue={editingProduct?.brand?.id} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                      <select name="brandId" defaultValue={safeInputValue(editingProduct?.brandId || brands.find(b => b.name === editingProduct?.brandName)?.id)} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition">
+                        <option value="">Chọn thương hiệu</option>
                         {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                       </select>
                     </div>
@@ -379,13 +486,84 @@ export default function AdminProductsPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700 ml-1">Giá bán (VND)</label>
-                      <input name="price" type="number" defaultValue={editingProduct?.price} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <label className="text-sm font-bold text-slate-700 ml-1">SKU</label>
+                      <input name="sku" defaultValue={safeInputValue(editingProduct?.variants?.[0]?.sku)} placeholder="VD: LAPTOP-001" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700 ml-1">Số lượng tồn</label>
-                      <input name="stock" type="number" defaultValue={editingProduct?.stock} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <label className="text-sm font-bold text-slate-700 ml-1">Giá bán (VND)</label>
+                      <input name="price" type="number" defaultValue={safeInputValue(editingProduct?.variants?.[0]?.price)} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 ml-1">Màu sắc</label>
+                    <input name="color" defaultValue={safeInputValue(editingProduct?.variants?.[0]?.color)} placeholder="VD: Đen" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="text-sm font-bold text-slate-700 ml-1">Tồn kho theo chi nhánh</label>
+                      <div className="flex rounded-2xl bg-slate-100 p-1 text-xs font-black">
+                        <button
+                          type="button"
+                          onClick={() => setStockMode("all")}
+                          className={`px-3 py-2 rounded-xl transition ${stockMode === "all" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"}`}
+                        >
+                          Toàn bộ
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setStockMode("custom")}
+                          className={`px-3 py-2 rounded-xl transition ${stockMode === "custom" ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"}`}
+                        >
+                          Chọn riêng
+                        </button>
+                      </div>
+                    </div>
+
+                    {stockMode === "all" ? (
+                      <div className="space-y-2">
+                        <input
+                          key="all-stock-input"
+                          name="stock"
+                          type="number"
+                          min={0}
+                          value={allBranchStock}
+                          onChange={(event) => setAllBranchStock(event.target.value)}
+                          required
+                          className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition"
+                        />
+                        <p className="text-xs font-medium text-slate-400">
+                          Số lượng này sẽ được áp dụng cho tất cả {branches.length} chi nhánh.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-56 overflow-y-auto pr-2">
+                        <input key="custom-stock-total" type="hidden" name="stock" value={customStockTotal} readOnly />
+                        {branches.length === 0 ? (
+                          <p className="text-sm font-bold text-red-500 bg-red-50 border border-red-100 rounded-2xl px-4 py-3">
+                            Chưa có chi nhánh để chọn.
+                          </p>
+                        ) : (
+                          branches.map((branch) => (
+                            <div key={branch.id} className="grid grid-cols-[1fr_130px] gap-3 items-center bg-slate-50 border border-slate-100 rounded-2xl p-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-black text-slate-900 truncate">{branch.name}</p>
+                                <p className="text-xs text-slate-400 truncate">{branch.address || "Chưa có địa chỉ"}</p>
+                              </div>
+                              <input
+                                type="number"
+                                min={0}
+                                value={branch.id ? safeInputValue(branchStocks[branch.id]) : ""}
+                                onChange={(event) => branch.id && updateBranchStock(branch.id, event.target.value)}
+                                placeholder="0"
+                                className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl font-bold outline-none focus:border-blue-600 transition"
+                              />
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-4">
@@ -409,7 +587,7 @@ export default function AdminProductsPage() {
                     >
                       {imageUrl ? (
                         <div className="relative aspect-video flex items-center justify-center p-4">
-                          <img src={imageUrl} alt="Preview" className="max-h-full max-w-full object-contain rounded-xl shadow-lg" />
+                          <img src={resolveApiAssetUrl(imageUrl)} alt="Preview" className="max-h-full max-w-full object-contain rounded-xl shadow-lg" />
                           <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                             <button 
                               type="button"
@@ -464,8 +642,9 @@ export default function AdminProductsPage() {
 
                     <input 
                       name="imageUrl" 
-                      value={imageUrl} 
+                      value={safeInputValue(imageUrl)}
                       onChange={(e) => setImageUrl(e.target.value)}
+                      onBlur={(e) => setImageUrl(normalizeAssetUrl(e.target.value))}
                       onPaste={handlePaste}
                       placeholder="Hoặc dán URL hình ảnh tại đây..." 
                       className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition text-sm" 
@@ -480,33 +659,33 @@ export default function AdminProductsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">CPU</label>
-                      <input name="cpu" defaultValue={editingProduct?.specification?.cpu} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="cpu" defaultValue={safeInputValue(getSpecValue(editingProduct, "cpu"))} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">RAM</label>
-                      <input name="ram" defaultValue={editingProduct?.specification?.ram} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="ram" defaultValue={safeInputValue(getSpecValue(editingProduct, "ram"))} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Ổ cứng</label>
-                      <input name="storage" defaultValue={editingProduct?.specification?.storage} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="storage" defaultValue={safeInputValue(getSpecValue(editingProduct, "storage"))} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700 ml-1">Card màn hình</label>
-                      <input name="vga" defaultValue={editingProduct?.specification?.vga} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                      <input name="vga" defaultValue={safeInputValue(getSpecValue(editingProduct, "vga"))} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 ml-1">Màn hình</label>
-                    <input name="screen" defaultValue={editingProduct?.specification?.screen} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
+                    <input name="screen" defaultValue={safeInputValue(getSpecValue(editingProduct, "screen"))} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition" />
                   </div>
 
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 ml-1">Mô tả ngắn</label>
-                    <textarea name="description" defaultValue={editingProduct?.description} rows={4} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition resize-none"></textarea>
+                    <textarea name="description" defaultValue={safeInputValue(editingProduct?.description)} rows={4} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition resize-none"></textarea>
                   </div>
                 </div>
               </div>

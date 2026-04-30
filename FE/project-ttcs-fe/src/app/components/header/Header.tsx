@@ -108,7 +108,9 @@ export const Header = () => {
                 <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
                   <User size={14} />
                 </div>
-                <span className="font-medium max-w-[100px] truncate">{user.fullName || user.email}</span>
+                <span className="font-medium max-w-[100px] truncate">
+                  {user.fullName || user.username || "User"}
+                </span>
                 <ChevronDown size={14} className={`transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -123,7 +125,7 @@ export const Header = () => {
                     <LayoutGrid size={16} />
                     Đơn hàng của tôi
                   </Link>
-                  {user.role === "ADMIN" && (
+                  {(user.role === "ADMIN" || user.role === "MANAGER") && (
                     <Link href="/admin" onClick={() => setIsUserMenuOpen(false)} className="flex items-center gap-3 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition text-sm font-bold">
                        <ShieldAlert size={16} />
                        Quản trị hệ thống

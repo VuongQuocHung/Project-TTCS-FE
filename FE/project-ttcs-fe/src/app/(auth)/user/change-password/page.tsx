@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { authApi } from "@/lib/api-endpoints";
+import { profileApi } from "@/lib/api-endpoints";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { 
   Lock, 
@@ -42,7 +42,10 @@ function ChangePasswordForm() {
     setError(null);
 
     try {
-      await authApi.changePassword(formData);
+      await profileApi.changePassword({
+        oldPassword: formData.oldPassword,
+        newPassword: formData.newPassword,
+      });
       setIsSuccess(true);
       setFormData({ oldPassword: "", newPassword: "", confirmPassword: "" });
     } catch (err: unknown) {

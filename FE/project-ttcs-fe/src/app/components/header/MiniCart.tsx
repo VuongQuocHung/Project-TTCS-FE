@@ -33,15 +33,15 @@ export const MiniCart = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
             <div key={item.id} className="flex gap-4 group">
               <div className="w-20 h-20 bg-slate-50 border rounded-lg overflow-hidden flex-shrink-0">
                 <img
-                  src={item.product.images?.[0]?.imageUrl || "/assets/images/loq.jpg"}
-                  alt={item.product.name}
+                  src="/assets/images/loq.jpg"
+                  alt={item.productName}
                   className="w-full h-full object-contain"
                 />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-semibold truncate hover:text-blue-600">
-                  <Link href={`/product/${item.id}`} onClick={onClose}>
-                    {item.product.name}
+                  <Link href={`#`} onClick={onClose}>
+                    {item.productName}
                   </Link>
                 </h3>
                 <p className="text-xs text-slate-500 mt-1">Số lượng: {item.quantity}</p>
@@ -49,11 +49,13 @@ export const MiniCart = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
                   {new Intl.NumberFormat("vi-VN", {
                     style: "currency",
                     currency: "VND",
-                  }).format(item.product.price || 0)}
+                  }).format(item.snapshotPrice || item.price || 0)}
                 </p>
               </div>
               <button
-                onClick={() => removeFromCart(item.id)}
+                onClick={() => {
+                  if (item.id) removeFromCart(item.id);
+                }}
                 className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition self-center"
               >
                 <Trash2 className="w-4 h-4" />

@@ -17,6 +17,7 @@ import { useCart } from "@/context/CartContext";
 import { CountdownTimer } from "@/app/components/common/CountdownTimer";
 import { categoryApi } from "@/lib/api-endpoints";
 import { Category } from "@/types/api";
+import { getPrimaryImage, getSpecValue } from "@/lib/format";
 
 export default function HomePage() {
   const { addToCart } = useCart();
@@ -30,13 +31,13 @@ export default function HomePage() {
       try {
         const [prodRes, catRes] = await Promise.all([
           productApi.getAll({ size: 8 }),
-          categoryApi.getAll({ size: 3 })
+          categoryApi.getAllPublic()
         ]);
         
         const allProducts = prodRes.content || [];
         setFlashSaleProducts(allProducts.slice(0, 4));
         setTrendingProducts(allProducts.slice(4, 7));
-        setCategories(catRes.content || []);
+        setCategories(catRes || []);
       } catch (error) {
         console.error("Failed to fetch home data:", error);
       } finally {
@@ -140,7 +141,7 @@ export default function HomePage() {
                         SALE 20%
                       </span>
                       <img
-                        src={p.images?.[0]?.imageUrl || "/assets/images/loq.jpg"}
+                        src={getPrimaryImage(p)}
                         alt={p.name}
                         className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                       />
@@ -150,7 +151,9 @@ export default function HomePage() {
                       {p.name}
                     </h3>
                     <p className="text-xs text-slate-500 mb-6 line-clamp-2 min-h-[32px]">
-                      {p.specification?.cpu} {p.specification?.ram} {p.specification?.vga}
+                      {[getSpecValue(p, "cpu"), getSpecValue(p, "ram"), getSpecValue(p, "vga")]
+                        .filter(Boolean)
+                        .join(" ")}
                     </p>
                   </Link>
 
@@ -160,18 +163,24 @@ export default function HomePage() {
                         {new Intl.NumberFormat("vi-VN", {
                           style: "currency",
                           currency: "VND",
-                        }).format(p.price || 0)}
+                        }).format(p.variants?.[0]?.price || 0)}
                       </p>
                       <p className="text-xs line-through text-slate-400 font-medium">
                         {new Intl.NumberFormat("vi-VN", {
                           style: "currency",
                           currency: "VND",
-                        }).format((p.price || 0) * 1.2)}
+                        }).format((p.variants?.[0]?.price || 0) * 1.2)}
                       </p>
                     </Link>
 
                     <button 
-                      onClick={() => addToCart(p)}
+                      onClick={() => {
+                        if (p.variants && p.variants.length > 0 && p.variants[0].id) {
+                          addToCart(p.variants[0].id, 1);
+                        } else {
+                          alert("Sản phẩm chưa có biến thể");
+                        }
+                      }}
                       className="bg-blue-600 text-white p-3 rounded-xl hover:bg-slate-900 transition-all shadow-lg shadow-blue-100"
                     >
                       <ShoppingBag className="w-5 h-5" />
@@ -199,7 +208,7 @@ export default function HomePage() {
               >
                 <div className="w-24 h-24 bg-slate-50 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center">
                   <img 
-                    src={p.images?.[0]?.imageUrl || "/assets/images/loq.jpg"} 
+                    src={getPrimaryImage(p)} 
                     alt={p.name} 
                     className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                   />
@@ -211,7 +220,7 @@ export default function HomePage() {
                     {new Intl.NumberFormat("vi-VN", {
                       style: "currency",
                       currency: "VND",
-                    }).format(p.price || 0)}
+                    }).format(p.variants?.[0]?.price || 0)}
                   </p>
                   <div className="flex items-center gap-1 mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />

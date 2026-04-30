@@ -43,8 +43,9 @@ export default function AdminBrandsPage() {
     try {
       await brandApi.delete(id);
       fetchBrands();
-    } catch (err: any) {
-      alert(err?.message || "Xóa thất bại");
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
+      alert(apiError?.message || "Xóa thất bại");
     }
   };
 
@@ -52,9 +53,10 @@ export default function AdminBrandsPage() {
     e.preventDefault();
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
-    const data = {
+    const data: Brand = {
       name: formData.get("name") as string,
-      logoUrl: formData.get("logoUrl") as string,
+      logo: formData.get("logo") as string,
+      description: formData.get("description") as string,
     };
 
     try {
@@ -65,8 +67,9 @@ export default function AdminBrandsPage() {
       }
       setIsModalOpen(false);
       fetchBrands();
-    } catch (err: any) {
-      alert(err?.message || "Lưu thất bại");
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
+      alert(apiError?.message || "Lưu thất bại");
     } finally {
       setIsSubmitting(false);
     }
@@ -111,8 +114,8 @@ export default function AdminBrandsPage() {
         ) : filteredBrands.map((b) => (
           <div key={b.id} className="bg-white p-6 rounded-3xl border border-slate-200 hover:border-blue-200 hover:shadow-xl transition-all group flex flex-col items-center">
             <div className="w-20 h-20 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 border border-slate-100 p-3 group-hover:bg-blue-50 transition-colors">
-              {b.logoUrl ? (
-                <img src={b.logoUrl} alt={b.name} className="w-full h-full object-contain" />
+              {b.logo ? (
+                <img src={b.logo} alt={b.name} className="w-full h-full object-contain" />
               ) : (
                 <Award className="w-8 h-8 text-slate-300" />
               )}
@@ -155,8 +158,12 @@ export default function AdminBrandsPage() {
                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">Logo URL</label>
                 <div className="relative">
                    <ImageIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                   <input name="logoUrl" defaultValue={editingBrand?.logoUrl} placeholder="https://..." className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:border-blue-600" />
+                   <input name="logo" defaultValue={editingBrand?.logo} placeholder="https://..." className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:border-blue-600" />
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1">Mô tả</label>
+                <textarea name="description" defaultValue={editingBrand?.description} rows={3} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 resize-none" />
               </div>
               <button 
                 type="submit" 

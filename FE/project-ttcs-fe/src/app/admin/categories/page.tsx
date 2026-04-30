@@ -44,8 +44,9 @@ export default function AdminCategoriesPage() {
     try {
       await categoryApi.delete(id);
       fetchCategories();
-    } catch (err: any) {
-      alert(err?.message || "Xóa thất bại");
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
+      alert(apiError?.message || "Xóa thất bại");
     }
   };
 
@@ -66,8 +67,9 @@ export default function AdminCategoriesPage() {
       }
       setIsModalOpen(false);
       fetchCategories();
-    } catch (err: any) {
-      alert(err?.message || "Lưu thất bại");
+    } catch (err: unknown) {
+      const apiError = err as ApiError;
+      alert(apiError?.message || "Lưu thất bại");
     } finally {
       setIsSubmitting(false);
     }

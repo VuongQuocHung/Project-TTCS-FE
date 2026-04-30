@@ -1,23 +1,56 @@
-export interface Role {
-  id?: number;
-  name?: string;
-}
+export type Role = "GUEST" | "CUSTOMER" | "MANAGER" | "ADMIN";
+
+export type OrderStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "SHIPPING"
+  | "DELIVERED"
+  | "CANCELLED"
+  | "FAILED";
+
+export type PaymentMethod = "COD" | "VNPAY" | "MOMO" | "STRIPE";
+
+export type FulfillmentStatus =
+  | "FULLY_AVAILABLE"
+  | "PARTIALLY_AVAILABLE"
+  | "UNAVAILABLE";
 
 export interface User {
   id?: number;
+  username?: string;
   email?: string;
   fullName?: string;
-  phone?: string;
-  role?: Role;
+  phoneNumber?: string;
+  address?: string;
+  role?: Role | string;
+  branchId?: number;
+  enabled?: boolean;
   createdAt?: string;
-  resetToken?: string;
-  resetTokenExpiry?: string;
+  updatedAt?: string;
+}
+
+export interface AdminUserRequest {
+  username: string;
+  email: string;
+  password?: string;
+  fullName?: string;
+  phoneNumber?: string;
+  address?: string;
+  role?: Role | string;
+  branchId?: number | null;
+  enabled?: boolean;
+}
+
+export interface SessionUser extends User {
+  token?: string;
+  refreshToken?: string;
 }
 
 export interface Brand {
   id?: number;
   name?: string;
-  logoUrl?: string;
+  logo?: string;
+  description?: string;
 }
 
 export interface Category {
@@ -26,65 +59,75 @@ export interface Category {
   description?: string;
 }
 
-export interface Product {
+export interface Branch {
   id?: number;
   name?: string;
-  price?: number;
-  importPrice?: number;
-  stock?: number;
-  description?: string;
-  brand?: Brand;
-  category?: Category;
-  images?: ProductImage[];
-  specification?: ProductSpecification;
-  createdAt?: string;
-  updatedAt?: string;
+  address?: string;
+  phone?: string;
+}
+
+export interface Inventory {
+  branchId?: number;
+  branchName?: string;
+  quantity?: number;
 }
 
 export interface ProductImage {
   id?: number;
   imageUrl?: string;
-  isPrimary?: boolean;
 }
 
-export interface ProductSpecification {
+export interface ProductVariant {
   id?: number;
-  cpu?: string;
-  ram?: string;
-  storage?: string;
-  vga?: string;
-  screen?: string;
-  os?: string;
-  battery?: string;
-  weight?: string;
+  sku?: string;
+  price?: number;
+  color?: string;
+  specsJson?: Record<string, unknown>;
+  quantity?: number;
+  inventories?: Inventory[];
+  images?: ProductImage[];
+}
+
+export interface Product {
+  id?: number;
+  name?: string;
+  description?: string;
+  categoryId?: number;
+  categoryName?: string;
+  brandId?: number;
+  brandName?: string;
+  variants?: ProductVariant[];
 }
 
 export interface Review {
   id?: number;
-  product?: Product;
-  user?: User;
+  productId?: number;
+  username?: string;
+  fullName?: string;
   rating?: number;
-  comment?: string;
+  content?: string;
   createdAt?: string;
+}
+
+export interface OrderItem {
+  id?: number;
+  variantId?: number;
+  productName?: string;
+  sku?: string;
+  quantity?: number;
+  price?: number;
 }
 
 export interface Order {
   id?: number;
-  user?: User;
-  orderDate?: string;
-  status?: "PENDING" | "APPROVED" | "CANCELLED" | "DELIVERED";
-  totalAmount?: number;
-  shippingAddress?: string;
-  phoneNumber?: string;
-  orderDetails?: OrderDetail[];
-  updatedAt?: string;
-}
-
-export interface OrderDetail {
-  id?: number;
-  product?: Product;
-  quantity?: number;
-  unitPrice?: number;
+  userId?: number;
+  branchId?: number;
+  status?: OrderStatus | string;
+  totalPrice?: number;
+  discountAmount?: number;
+  voucherCode?: string;
+  createdAt?: string;
+  items?: OrderItem[];
 }
 
 export interface ResetPasswordRequest {
@@ -93,25 +136,25 @@ export interface ResetPasswordRequest {
 }
 
 export interface RegisterRequest {
-  fullName?: string;
+  username: string;
   email: string;
-  phone: string;
   password: string;
+  confirmPassword: string;
+  fullName?: string;
+  phoneNumber?: string;
+  address?: string;
 }
 
 export interface AuthResponse {
   token?: string;
-  accessToken?: string;
-  access_token?: string;
-  tokenType?: string;
-  email?: string;
-  fullName?: string;
-  role?: string;
+  refreshToken?: string;
+  username?: string;
+  role?: Role | string;
   user?: User;
 }
 
 export interface LoginRequest {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -126,7 +169,16 @@ export interface ForgotPasswordRequest {
 export interface ChangePasswordRequest {
   oldPassword: string;
   newPassword: string;
-  confirmPassword: string;
+}
+
+export interface RefreshTokenRequest {
+  refreshToken: string;
+}
+
+export interface UpdateProfileRequest {
+  fullName?: string;
+  phoneNumber?: string;
+  address?: string;
 }
 
 export interface SortObject {
@@ -144,89 +196,20 @@ export interface PageableObject {
   unpaged?: boolean;
 }
 
-export interface PageUser {
+export interface PageResponse<T> {
+  content?: T[];
+  pageNo?: number;
+  pageSize?: number;
   totalElements?: number;
   totalPages?: number;
-  pageable?: PageableObject;
-  size?: number;
-  content?: User[];
-  number?: number;
-  sort?: SortObject;
-  first?: boolean;
   last?: boolean;
-  numberOfElements?: number;
-  empty?: boolean;
 }
 
-export interface PageReview {
-  totalElements?: number;
-  totalPages?: number;
-  pageable?: PageableObject;
-  size?: number;
-  content?: Review[];
-  number?: number;
-  sort?: SortObject;
-  first?: boolean;
-  last?: boolean;
-  numberOfElements?: number;
-  empty?: boolean;
-}
-
-export interface PageProduct {
-  totalElements?: number;
-  totalPages?: number;
-  pageable?: PageableObject;
-  size?: number;
-  content?: Product[];
-  number?: number;
-  sort?: SortObject;
-  first?: boolean;
-  last?: boolean;
-  numberOfElements?: number;
-  empty?: boolean;
-}
-
-export interface PageOrder {
-  totalElements?: number;
-  totalPages?: number;
-  pageable?: PageableObject;
-  size?: number;
-  content?: Order[];
-  number?: number;
-  sort?: SortObject;
-  first?: boolean;
-  last?: boolean;
-  numberOfElements?: number;
-  empty?: boolean;
-}
-
-export interface PageCategory {
-  totalElements?: number;
-  totalPages?: number;
-  pageable?: PageableObject;
-  size?: number;
-  content?: Category[];
-  number?: number;
-  sort?: SortObject;
-  first?: boolean;
-  last?: boolean;
-  numberOfElements?: number;
-  empty?: boolean;
-}
-
-export interface PageBrand {
-  totalElements?: number;
-  totalPages?: number;
-  pageable?: PageableObject;
-  size?: number;
-  content?: Brand[];
-  number?: number;
-  sort?: SortObject;
-  first?: boolean;
-  last?: boolean;
-  numberOfElements?: number;
-  empty?: boolean;
-}
+export type PageReview = PageResponse<Review>;
+export type PageProduct = PageResponse<Product>;
+export type PageOrder = PageResponse<Order>;
+export type PageCategory = PageResponse<Category>;
+export type PageBrand = PageResponse<Brand>;
 
 export interface QueryParams {
   page?: number;
@@ -237,43 +220,87 @@ export interface QueryParams {
 }
 
 export interface ProductQueryParams extends QueryParams {
-  name?: string;
-  brandId?: number;
+  keyword?: string;
   categoryId?: number;
+  brandId?: number;
   minPrice?: number;
   maxPrice?: number;
-  cpu?: string[];
-  ram?: string[];
-  storage?: string[];
-  vga?: string[];
-  screen?: string[];
+  cpu?: string;
+  ram?: string;
+  storage?: string;
 }
 
 export interface OrderQueryParams extends QueryParams {
-  status?: "PENDING" | "APPROVED" | "CANCELLED" | "DELIVERED";
+  status?: OrderStatus;
   userId?: number;
-  phoneNumber?: string;
-  minAmount?: number;
-  maxAmount?: number;
+  branchId?: number;
 }
 
-export interface UserQueryParams extends QueryParams {
-  email?: string;
-  fullName?: string;
-  phone?: string;
-  roleId?: number;
+export type CategoryQueryParams = QueryParams;
+
+export type BrandQueryParams = QueryParams;
+
+export interface CartItem {
+  id?: number;
+  variantId?: number;
+  productName?: string;
+  variantSku?: string;
+  quantity?: number;
+  price?: number;
+  snapshotPrice?: number;
 }
 
-export interface ReviewQueryParams extends QueryParams {
-  productId?: number;
-  userId?: number;
-  rating?: number;
+export interface Cart {
+  id?: number;
+  items?: CartItem[];
+  totalPrice?: number;
 }
 
-export interface CategoryQueryParams extends QueryParams {
-  name?: string;
+export interface OrderItemRequest {
+  variantId: number;
+  quantity: number;
 }
 
-export interface BrandQueryParams extends QueryParams {
-  name?: string;
+export interface OrderRequest {
+  branchId: number;
+  items: OrderItemRequest[];
+  voucherCode?: string;
+  paymentMethod?: PaymentMethod;
+}
+
+export interface CartCheckRequest {
+  items: Array<{
+    variantId: number;
+    quantity: number;
+  }>;
+}
+
+export interface ItemFulfillment {
+  variantId?: number;
+  requestedQuantity?: number;
+  availableQuantity?: number;
+  isAvailable?: boolean;
+}
+
+export interface BranchFulfillment extends Branch {
+  branchId?: number;
+  branchName?: string;
+  status?: FulfillmentStatus | string;
+  items?: ItemFulfillment[];
+}
+
+export interface DashboardStats {
+  totalOrders?: number;
+  totalRevenue?: number;
+  successfulOrders?: number;
+  revenueByStatus?: Record<string, number>;
+}
+
+export interface LowStock {
+  branchId?: number;
+  branchName?: string;
+  variantId?: number;
+  sku?: string;
+  productName?: string;
+  quantity?: number;
 }

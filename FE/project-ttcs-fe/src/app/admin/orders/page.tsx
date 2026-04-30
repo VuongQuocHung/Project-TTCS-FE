@@ -1,242 +1,249 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { orderApi } from "@/lib/api-endpoints";
-import { Order } from "@/types/api";
-import { 
-  ShoppingBag, 
-  MapPin, 
-  Clock, 
-  CheckCircle2, 
-  Truck, 
+import {
   AlertCircle,
-  Search,
-  Filter,
-  Eye,
-  MoreVertical,
-  Check,
-  X,
-  ArrowRight
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Package,
+  RefreshCw,
+  ShoppingBag,
+  User,
 } from "lucide-react";
-import Link from "next/link";
-import { ApiError } from "@/lib/api";
+import { orderApi } from "@/lib/api-endpoints";
+import { formatCurrency, getOrderStatusClasses, getOrderStatusLabel } from "@/lib/format";
+import type { ApiError } from "@/lib/api";
+import type { Order, OrderStatus } from "@/types/api";
+
+const PAGE_SIZE = 10;
+const ORDER_STATUSES: OrderStatus[] = [
+  "PENDING",
+  "CONFIRMED",
+  "SHIPPING",
+  "DELIVERED",
+  "CANCELLED",
+  "FAILED",
+];
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | "">("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState("ALL");
-  const [searchTerm, setSearchTerm] = useState("");
-
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
 
   const fetchOrders = async () => {
+    setIsLoading(true);
+    setError(null);
+
     try {
-      setIsLoading(true);
-      const res = await orderApi.getAll({ size: 50 });
-      setOrders(res.content || []);
-    } catch (err: unknown) {
+      const response = await orderApi.getAllAdmin({
+        page,
+        size: PAGE_SIZE,
+        status: statusFilter || undefined,
+      });
+      setOrders(response.content || []);
+      setTotalPages(response.totalPages || 0);
+    } catch (err) {
       const apiError = err as ApiError;
-      setError(apiError?.message || "Lỗi khi tải danh sách đơn hàng");
+      setError(apiError?.message || "Không thể tải danh sách đơn hàng.");
+      setOrders([]);
+      setTotalPages(0);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleUpdateStatus = async (id: number, status: string) => {
+  useEffect(() => {
+    void fetchOrders();
+  }, [page, statusFilter]);
+
+  const handleUpdateStatus = async (orderId: number, status: OrderStatus) => {
+    setBusyOrderId(orderId);
+    setError(null);
+
     try {
-      await orderApi.updateStatus(id, status);
-      fetchOrders(); // Refresh
-    } catch (err: unknown) {
-      alert("Cập nhật trạng thái thất bại");
+      await orderApi.updateStatus(orderId, status);
+      await fetchOrders();
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError?.message || "Không thể cập nhật trạng thái đơn hàng.");
+    } finally {
+      setBusyOrderId(null);
     }
   };
-
-  const getStatusIcon = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case "DELIVERED": return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-      case "PENDING": return <Clock className="w-4 h-4 text-yellow-500" />;
-      case "APPROVED": return <Truck className="w-4 h-4 text-blue-500" />;
-      case "CANCELLED": return <AlertCircle className="w-4 h-4 text-red-500" />;
-      default: return <ShoppingBag className="w-4 h-4 text-slate-400" />;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case "DELIVERED": return "bg-green-50 text-green-700 border-green-100";
-      case "PENDING": return "bg-yellow-50 text-yellow-700 border-yellow-100";
-      case "APPROVED": return "bg-blue-50 text-blue-700 border-blue-100";
-      case "CANCELLED": return "bg-red-50 text-red-700 border-red-100";
-      default: return "bg-slate-50 text-slate-600 border-slate-200";
-    }
-  };
-
-  const filteredOrders = orders.filter(o => {
-    const matchesFilter = filter === "ALL" || o.status === filter;
-    const matchesSearch = o.shippingAddress?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          o.id?.toString().includes(searchTerm) ||
-                          o.phoneNumber?.includes(searchTerm);
-    return matchesFilter && matchesSearch;
-  });
 
   return (
-    <div className="space-y-10">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">Quản lý Đơn hàng</h1>
-          <p className="text-slate-500 font-medium mt-1">Theo dõi và cập nhật trạng thái đơn hàng của hệ thống.</p>
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
+            Quản lý đơn hàng
+          </h1>
+          <p className="text-slate-500 mt-2 font-medium">
+            Danh sách và cập nhật trạng thái theo endpoint admin orders của backend.
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-           <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 text-sm font-black text-slate-400 tracking-widest uppercase">
-             {filteredOrders.length} Đơn hàng
-           </div>
-        </div>
+
+        <button
+          type="button"
+          onClick={fetchOrders}
+          className="inline-flex items-center gap-2 bg-slate-900 text-white px-5 py-3 rounded-2xl font-black hover:bg-blue-600 transition"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Làm mới
+        </button>
       </div>
 
-      {/* FILTERS */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Tìm theo mã, địa chỉ, số điện thoại..." 
-            className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:border-blue-600 focus:ring-4 focus:ring-blue-100 outline-none transition font-medium"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="bg-white p-4 rounded-3xl border border-slate-200 flex flex-col sm:flex-row gap-4 sm:items-center shadow-sm">
+        <div className="flex items-center gap-3 text-slate-500 font-bold">
+          <ShoppingBag className="w-5 h-5 text-blue-600" />
+          <span>Trạng thái</span>
         </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-hide">
-           {["ALL", "PENDING", "APPROVED", "DELIVERED", "CANCELLED"].map(s => (
-             <button 
-              key={s}
-              onClick={() => setFilter(s)}
-              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                filter === s 
-                ? "bg-slate-900 text-white shadow-xl shadow-slate-200" 
-                : "bg-white text-slate-500 border border-slate-200 hover:border-blue-600 hover:text-blue-600"
-              }`}
-             >
-               {s === "ALL" ? "Tất cả" : s}
-             </button>
-           ))}
-        </div>
+        <select
+          value={statusFilter}
+          onChange={(event) => {
+            setPage(0);
+            setStatusFilter(event.target.value as OrderStatus | "");
+          }}
+          className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600"
+        >
+          <option value="">Tất cả đơn hàng</option>
+          {ORDER_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {getOrderStatusLabel(status)}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* TABLE */}
+      {error ? (
+        <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5" />
+          <p className="font-medium">{error}</p>
+        </div>
+      ) : null}
+
       <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã đơn</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Khách hàng</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Thông tin</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Trạng thái</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Tổng tiền</th>
-                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Thao tác</th>
+              <tr className="bg-slate-50 border-b border-slate-100">
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Đơn hàng
+                </th>
+                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Người dùng
+                </th>
+                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Tổng tiền
+                </th>
+                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Trạng thái
+                </th>
+                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Cập nhật
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-50">
               {isLoading ? (
-                Array(5).fill(0).map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    <td colSpan={6} className="px-6 py-8">
-                       <div className="h-4 bg-slate-50 rounded w-full"></div>
-                    </td>
+                Array.from({ length: 5 }).map((_, index) => (
+                  <tr key={index} className="animate-pulse">
+                    <td className="px-8 py-6"><div className="h-12 bg-slate-100 rounded-2xl w-44" /></td>
+                    <td className="px-6 py-6"><div className="h-10 bg-slate-100 rounded-xl w-28" /></td>
+                    <td className="px-6 py-6"><div className="h-10 bg-slate-100 rounded-xl w-32" /></td>
+                    <td className="px-6 py-6"><div className="h-10 bg-slate-100 rounded-xl w-36" /></td>
+                    <td className="px-8 py-6"><div className="h-10 bg-slate-100 rounded-xl w-44" /></td>
                   </tr>
                 ))
-              ) : filteredOrders.length === 0 ? (
+              ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
-                     <ShoppingBag className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                     <p className="text-slate-400 font-bold">Không tìm thấy đơn hàng nào</p>
+                  <td colSpan={5} className="px-8 py-20 text-center">
+                    <Package className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                    <p className="text-slate-400 font-bold">Không có đơn hàng phù hợp</p>
                   </td>
                 </tr>
               ) : (
-                filteredOrders.map((order) => (
-                  <tr key={order.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-6 py-6 font-black text-slate-900">#VPH-{order.id}</td>
-                    <td className="px-6 py-6">
-                       <p className="text-sm font-bold text-slate-900">{order.user?.fullName || "Khách hàng lẻ"}</p>
-                       <p className="text-xs text-slate-400">{order.phoneNumber}</p>
-                    </td>
-                    <td className="px-6 py-6 max-w-[200px]">
-                       <div className="flex items-start gap-2">
-                          <MapPin className="w-4 h-4 text-slate-300 mt-0.5" />
-                          <p className="text-xs font-medium text-slate-500 leading-relaxed truncate" title={order.shippingAddress}>
-                            {order.shippingAddress}
-                          </p>
-                       </div>
-                       <div className="flex items-center gap-2 mt-1">
-                          <Clock className="w-4 h-4 text-slate-300" />
-                          <p className="text-[10px] font-bold text-slate-400">
-                            {order.orderDate ? new Date(order.orderDate).toLocaleDateString("vi-VN") : "---"}
-                          </p>
-                       </div>
-                    </td>
-                    <td className="px-6 py-6 font-black text-slate-900">
-                      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-[10px] uppercase tracking-widest ${getStatusColor(order.status || "PENDING")}`}>
-                         {getStatusIcon(order.status || "PENDING")}
-                         {order.status || "PENDING"}
+                orders.map((order) => (
+                  <tr key={order.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-8 py-6">
+                      <p className="font-black text-blue-600">#{order.id}</p>
+                      <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                        <Clock className="w-3.5 h-3.5" />
+                        {order.createdAt ? new Date(order.createdAt).toLocaleString("vi-VN") : "---"}
                       </div>
                     </td>
                     <td className="px-6 py-6">
-                       <p className="font-black text-blue-600">
-                        {new Intl.NumberFormat("vi-VN", {
-                          style: "currency",
-                          currency: "VND",
-                        }).format(order.totalAmount || 0)}
-                       </p>
+                      <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
+                        <User className="w-4 h-4 text-slate-400" />
+                        #{order.userId || "---"}
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Chi nhánh #{order.branchId || "---"}
+                      </p>
                     </td>
                     <td className="px-6 py-6">
-                       <div className="flex items-center gap-2">
-                          <Link 
-                            href={`/user/orders/${order.id}`}
-                            className="p-2.5 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-900 hover:text-white transition-all shadow-sm"
-                            title="Xem chi tiết"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Link>
-                          
-                          {/* Quick Edit Actions */}
-                          {order.status === "PENDING" && (
-                            <button 
-                              onClick={() => handleUpdateStatus(order.id!, "APPROVED")}
-                              className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                              title="Duyệt đơn"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                          )}
-                          {(order.status === "APPROVED" || order.status === "PENDING") && (
-                             <button 
-                              onClick={() => handleUpdateStatus(order.id!, "CANCELLED")}
-                              className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm"
-                              title="Hủy đơn"
-                             >
-                               <X className="w-4 h-4" />
-                             </button>
-                          )}
-                          {order.status === "APPROVED" && (
-                            <button 
-                              onClick={() => handleUpdateStatus(order.id!, "DELIVERED")}
-                              className="p-2.5 bg-green-50 text-green-600 rounded-xl hover:bg-green-600 hover:text-white transition-all shadow-sm"
-                              title="Hoàn thành"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                            </button>
-                          )}
-                       </div>
+                      <p className="text-lg font-black text-slate-900">
+                        {formatCurrency(order.totalPrice)}
+                      </p>
+                      {order.discountAmount ? (
+                        <p className="text-xs text-green-600 font-bold">
+                          Giảm {formatCurrency(order.discountAmount)}
+                        </p>
+                      ) : null}
+                    </td>
+                    <td className="px-6 py-6">
+                      <span
+                        className={`inline-flex px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-widest ${getOrderStatusClasses(order.status)}`}
+                      >
+                        {getOrderStatusLabel(order.status)}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6">
+                      <select
+                        value={order.status || "PENDING"}
+                        onChange={(event) => order.id && handleUpdateStatus(order.id, event.target.value as OrderStatus)}
+                        disabled={!order.id || busyOrderId === order.id}
+                        className="px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium disabled:opacity-60"
+                      >
+                        {ORDER_STATUSES.map((status) => (
+                          <option key={status} value={status}>
+                            {getOrderStatusLabel(status)}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="px-8 py-5 border-t border-slate-100 flex items-center justify-between">
+          <p className="text-sm font-bold text-slate-400">
+            Trang <span className="text-slate-900">{page + 1}</span> / {Math.max(totalPages, 1)}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              disabled={page === 0}
+              onClick={() => setPage((current) => current - 1)}
+              className="p-2 border border-slate-200 rounded-xl text-slate-400 hover:text-blue-600 disabled:opacity-30 transition"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              disabled={page + 1 >= totalPages}
+              onClick={() => setPage((current) => current + 1)}
+              className="p-2 border border-slate-200 rounded-xl text-slate-400 hover:text-blue-600 disabled:opacity-30 transition"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

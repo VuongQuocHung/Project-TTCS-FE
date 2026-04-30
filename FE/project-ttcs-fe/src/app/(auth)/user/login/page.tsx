@@ -31,9 +31,9 @@ function UserLoginContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleLoginSuccess = (res: AuthResponse) => {
-    authLogin(res);
-    setSuccess(`Đăng nhập thành công: ${res.fullName}`);
+  const handleLoginSuccess = async (res: AuthResponse) => {
+    await authLogin(res);
+    setSuccess(`Đăng nhập thành công: ${res.username}`);
 
     const callbackUrl = searchParams.get("callbackUrl");
     router.push(callbackUrl ? decodeURIComponent(callbackUrl) : "/");
@@ -45,20 +45,20 @@ function UserLoginContent() {
     setError(null);
     setSuccess(null);
 
-    const form = event.currentTarget; 
+    const form = event.currentTarget;
     const formData = new FormData(form);
 
-    const email = String(formData.get("email") ?? "").trim();
+    const username = String(formData.get("username") ?? "").trim();
     const password = String(formData.get("password") ?? "");
 
-    if (!email || !password) {
-      setError("Vui lòng nhập email và mật khẩu.");
+    if (!username || !password) {
+      setError("Vui lòng nhập tên đăng nhập và mật khẩu.");
       return;
     }
 
     setIsLoading(true);
     setIsGoogleLoading(false);
-    authApi.login({ email, password })
+    authApi.login({ username, password })
       .then(handleLoginSuccess)
       .catch((e: ApiError) => {
         setError(e?.message || "Đăng nhập thất bại");
@@ -128,15 +128,15 @@ function UserLoginContent() {
 
             <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-y-[16px]">
               <div>
-                <label htmlFor="email" className="block font-[500] text-[13px] text-black mb-[6px]">
-                  Email *
+                <label htmlFor="username" className="block font-[500] text-[13px] text-black mb-[6px]">
+                  Tên đăng nhập *
                 </label>
                 <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  autoComplete="email"
-                  placeholder="example@email.com"
+                  type="text"
+                  id="username"
+                  name="username"
+                  autoComplete="username"
+                  placeholder="Nhập tên đăng nhập"
                   className="w-full h-[46px] border border-[#DEDEDE] rounded-[4px] py-[14px] px-[16px] font-[500] text-[14px] text-black bg-[#FAFAFA] focus:outline-none focus:border-[#0088FF] 
                   focus:ring-2 focus:ring-[#0088FF]/20 transition"
                 />

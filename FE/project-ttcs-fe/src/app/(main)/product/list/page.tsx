@@ -4,11 +4,11 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { type Product, type ProductQueryParams } from "@/types/api";
 import { productApi } from "@/lib/api-endpoints";
-import { 
-  ShoppingBag, 
-  Filter, 
-  ChevronRight, 
-  LayoutGrid, 
+import {
+  ShoppingBag,
+  Filter,
+  ChevronRight,
+  LayoutGrid,
   Star,
   Search as SearchIcon,
   X,
@@ -20,14 +20,16 @@ import Link from "next/link";
 import { categoryApi, brandApi } from "@/lib/api-endpoints";
 import { Category, Brand } from "@/types/api";
 import { Pagination } from "@/app/components/common/Pagination";
+import { getPrimaryImage, getSpecValue } from "@/lib/format";
+import type { ApiError } from "@/lib/api";
 
 function ProductListContent() {
   const { addToCart } = useCart();
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const PAGE_SIZE = 3;
-  
+  const PAGE_SIZE = 6;
+
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -46,11 +48,12 @@ function ProductListContent() {
 
   useEffect(() => {
     let isMounted = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     setError(null);
 
     const params: ProductQueryParams = {
-      name: q || undefined,
+      keyword: q || undefined,
       brandId: brandId ? Number(brandId) : undefined,
       categoryId: categoryId ? Number(categoryId) : undefined,
       page: currentPage,
@@ -63,11 +66,12 @@ function ProductListContent() {
         setProducts(res.content || []);
         setTotalPages(res.totalPages || 0);
         setTotalElements(res.totalElements || 0);
-        setNumberOfElements(res.numberOfElements || (res.content?.length || 0));
+        setNumberOfElements(res.content?.length || 0);
       })
-      .catch((e: any) => {
+      .catch((e: unknown) => {
         if (!isMounted) return;
-        setError(e?.message || "Không tải được danh sách sản phẩm");
+        const apiError = e as ApiError;
+        setError(apiError?.message || "Không tải được danh sách sản phẩm");
         setProducts([]);
         setTotalPages(0);
         setTotalElements(0);
@@ -87,11 +91,11 @@ function ProductListContent() {
     const fetchMetadata = async () => {
       try {
         const [catRes, brandRes] = await Promise.all([
-          categoryApi.getAll({ size: 100 }),
-          brandApi.getAll({ size: 100 })
+          categoryApi.getAllPublic(),
+          brandApi.getAllPublic()
         ]);
-        setCategories(catRes.content || []);
-        setBrands(brandRes.content || []);
+        setCategories(catRes || []);
+        setBrands(brandRes || []);
       } catch (err) {
         console.error("Failed to fetch metadata:", err);
       }
@@ -152,19 +156,19 @@ function ProductListContent() {
           </div>
 
           <div className="flex items-center gap-3">
-             <div className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-600 flex items-center gap-2 shadow-sm">
-                <LayoutGrid className="w-4 h-4 text-blue-600" />
-                  <span>{totalElements || products.length} Sản phẩm</span>
-             </div>
-             {(q || brandId || categoryId) && (
-               <button 
+            <div className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-600 flex items-center gap-2 shadow-sm">
+              <LayoutGrid className="w-4 h-4 text-blue-600" />
+              <span>{totalElements || products.length} Sản phẩm</span>
+            </div>
+            {(q || brandId || categoryId) && (
+              <button
                 onClick={() => router.push('/product/list')}
                 className="bg-red-50 text-red-600 border border-red-100 rounded-xl px-4 py-2 text-sm font-bold flex items-center gap-2 hover:bg-red-100 transition shadow-sm"
-               >
-                 <X className="w-4 h-4" />
-                 Xóa lọc
-               </button>
-             )}
+              >
+                <X className="w-4 h-4" />
+                Xóa lọc
+              </button>
+            )}
           </div>
         </div>
 
@@ -176,7 +180,7 @@ function ProductListContent() {
                 <Filter className="w-5 h-5 text-blue-600" />
                 <h3 className="font-black tracking-tighter">Bộ lọc tìm kiếm</h3>
               </div>
-              
+
               <div className="space-y-8">
                 {/* Categories */}
                 <div>
@@ -184,11 +188,11 @@ function ProductListContent() {
                   <div className="space-y-3">
                     {categories.map((c) => (
                       <label key={c.id} className="flex items-center gap-3 cursor-pointer group">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           checked={categoryId === String(c.id)}
                           onChange={(e) => updateFilter("categoryId", e.target.checked ? String(c.id) : null)}
-                          className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-600 transition" 
+                          className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-600 transition"
                         />
                         <span className={`text-sm font-medium transition-colors ${categoryId === String(c.id) ? 'text-blue-600 font-bold' : 'text-slate-600 group-hover:text-blue-600'}`}>{c.name}</span>
                       </label>
@@ -202,11 +206,11 @@ function ProductListContent() {
                   <div className="space-y-3">
                     {brands.map((b) => (
                       <label key={b.id} className="flex items-center gap-3 cursor-pointer group">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           checked={brandId === String(b.id)}
                           onChange={(e) => updateFilter("brandId", e.target.checked ? String(b.id) : null)}
-                          className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-600 transition" 
+                          className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-600 transition"
                         />
                         <span className={`text-sm font-medium transition-colors ${brandId === String(b.id) ? 'text-blue-600 font-bold' : 'text-slate-600 group-hover:text-blue-600'}`}>{b.name}</span>
                       </label>
@@ -226,15 +230,15 @@ function ProductListContent() {
                 </div>
               </div>
             </div>
-            
+
             {/* Promo Banner */}
             <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl p-6 text-white shadow-xl shadow-blue-100 relative overflow-hidden">
-               <div className="relative z-10">
-                 <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 opacity-80">Ưu đãi tháng 4</p>
-                 <h4 className="text-xl font-black mb-4 tracking-tighter">TRẢ GÓP 0% <br/> CHO SINH VIÊN</h4>
-                 <button className="bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 transition">Tìm hiểu thêm</button>
-               </div>
-               <Star className="absolute top-[-10px] right-[-10px] w-20 h-20 text-white/10 rotate-12" />
+              <div className="relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 opacity-80">Ưu đãi tháng 4</p>
+                <h4 className="text-xl font-black mb-4 tracking-tighter">TRẢ GÓP 0% <br /> CHO SINH VIÊN</h4>
+                <button className="bg-white text-blue-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-100 transition">Tìm hiểu thêm</button>
+              </div>
+              <Star className="absolute top-[-10px] right-[-10px] w-20 h-20 text-white/10 rotate-12" />
             </div>
           </aside>
 
@@ -260,7 +264,7 @@ function ProductListContent() {
                     </div>
                     <h3 className="text-xl font-black text-slate-900 mb-2 tracking-tighter">Không tìm thấy sản phẩm</h3>
                     <p className="text-slate-400 font-medium max-w-xs mx-auto">Chúng tôi không tìm thấy sản phẩm nào phù hợp với yêu cầu của bạn.</p>
-                    <button 
+                    <button
                       onClick={() => router.push('/product/list')}
                       className="mt-8 text-blue-600 font-bold hover:underline"
                     >
@@ -271,31 +275,31 @@ function ProductListContent() {
                   products.map((p) => (
                     <div key={p.id} className="group bg-white p-6 rounded-3xl border border-slate-200 hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-50 transition-all duration-300 flex flex-col">
                       <div className="relative aspect-square mb-6 bg-slate-50 rounded-2xl overflow-hidden p-6 shrink-0">
-                         <Link href={`/product/${p.id}`}>
-                           <img 
-                            src={p.images?.[0]?.imageUrl || "/assets/images/loq.jpg"} 
-                            className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500" 
-                            alt={p.name} 
-                           />
-                         </Link>
-                         <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-md px-2 py-1 rounded-lg text-[10px] font-black text-slate-800 border border-white">
-                            <span>HOT</span>
-                         </div>
+                        <Link href={`/product/${p.id}`}>
+                          <img
+                            src={getPrimaryImage(p)}
+                            className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
+                            alt={p.name}
+                          />
+                        </Link>
+                        <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-md px-2 py-1 rounded-lg text-[10px] font-black text-slate-800 border border-white">
+                          <span>HOT</span>
+                        </div>
                       </div>
 
                       <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors mb-2 line-clamp-2 min-h-[40px]">
                         <Link href={`/product/${p.id}`}>{p.name}</Link>
                       </h3>
-                      
+
                       <div className="flex flex-wrap gap-1.5 mb-6">
-                        {p.specification?.cpu && (
+                        {getSpecValue(p, "cpu") && (
                           <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 lowercase">
-                            {p.specification.cpu.split(' ').slice(0, 2).join(' ')}
+                            {getSpecValue(p, "cpu").split(" ").slice(0, 2).join(" ")}
                           </span>
                         )}
-                        {p.specification?.ram && (
+                        {getSpecValue(p, "ram") && (
                           <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 uppercase">
-                            {p.specification.ram}
+                            {getSpecValue(p, "ram")}
                           </span>
                         )}
                       </div>
@@ -303,15 +307,21 @@ function ProductListContent() {
                       <div className="flex items-center justify-between mt-auto">
                         <div>
                           <p className="text-xs text-slate-400 line-through font-medium mb-0.5">
-                             {formatVnd((p.price || 0) * 1.1)}
+                            {formatVnd((p.variants?.[0]?.price || 0) * 1.1)}
                           </p>
                           <p className="text-xl font-black text-blue-600 tracking-tighter">
-                            {formatVnd(p.price)}
+                            {formatVnd(p.variants?.[0]?.price)}
                           </p>
                         </div>
-                        
-                        <button 
-                          onClick={() => addToCart(p)}
+
+                        <button
+                          onClick={() => {
+                            if (p.variants && p.variants.length > 0 && p.variants[0].id) {
+                              addToCart(p.variants[0].id, 1);
+                            } else {
+                              alert("Sản phẩm chưa có biến thể");
+                            }
+                          }}
                           className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg shadow-slate-200 overflow-hidden relative group/btn"
                         >
                           <ShoppingBag className="w-5 h-5 relative z-10" />
