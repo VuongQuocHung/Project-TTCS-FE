@@ -11,6 +11,7 @@ import {
   Users, 
   Tag, 
   Ticket,
+  Building2,
   Settings,
   ArrowLeft,
   ChevronRight
@@ -23,6 +24,7 @@ const sidebarItems = [
   { name: "Người dùng", icon: <Users className="w-5 h-5" />, href: "/admin/users" },
   { name: "Danh mục", icon: <Tag className="w-5 h-5" />, href: "/admin/categories" },
   { name: "Voucher", icon: <Ticket className="w-5 h-5" />, href: "/admin/vouchers" },
+  { name: "Chi nhánh", icon: <Building2 className="w-5 h-5" />, href: "/admin/branches" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
