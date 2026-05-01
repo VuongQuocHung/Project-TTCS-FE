@@ -15,6 +15,10 @@ export type FulfillmentStatus =
   | "PARTIALLY_AVAILABLE"
   | "UNAVAILABLE";
 
+export type DiscountType = "PERCENTAGE" | "FIXED_AMOUNT";
+
+export type VoucherStatus = "ACTIVE" | "INACTIVE" | "EXPIRED" | "EXHAUSTED";
+
 export interface User {
   id?: number;
   username?: string;
@@ -130,6 +134,23 @@ export interface Order {
   items?: OrderItem[];
 }
 
+export interface Voucher {
+  id?: number;
+  code?: string;
+  discountType?: DiscountType | string;
+  discountValue?: number;
+  minOrderValue?: number;
+  maxDiscountValue?: number;
+  startDate?: string;
+  endDate?: string;
+  usageLimit?: number;
+  usedCount?: number;
+  status?: VoucherStatus | string;
+  targetUserId?: number | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ResetPasswordRequest {
   token: string;
   newPassword: string;
@@ -210,6 +231,7 @@ export type PageProduct = PageResponse<Product>;
 export type PageOrder = PageResponse<Order>;
 export type PageCategory = PageResponse<Category>;
 export type PageBrand = PageResponse<Brand>;
+export type PageVoucher = PageResponse<Voucher>;
 
 export interface QueryParams {
   page?: number;

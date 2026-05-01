@@ -85,10 +85,6 @@ export default function AdminDashboard() {
           <h1 className="text-4xl font-black text-slate-900 tracking-tighter">
             Tổng quan hệ thống
           </h1>
-          <p className="text-slate-500 font-medium mt-1">
-            Dashboard đang đọc số liệu thật từ backend admin thay vì tự suy luận từ
-            field cũ của frontend.
-          </p>
         </div>
         <div className="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-2xl border border-green-100 text-xs font-black uppercase tracking-widest">
           <Activity className="w-4 h-4" />
