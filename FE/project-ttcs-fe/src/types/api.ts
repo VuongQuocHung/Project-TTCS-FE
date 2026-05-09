@@ -232,6 +232,7 @@ export type PageOrder = PageResponse<Order>;
 export type PageCategory = PageResponse<Category>;
 export type PageBrand = PageResponse<Brand>;
 export type PageVoucher = PageResponse<Voucher>;
+export type PageUser = PageResponse<User>;
 
 export interface QueryParams {
   page?: number;

@@ -37,14 +37,14 @@ export default function AdminDashboard() {
             orderApi.getDashboardStats(),
             orderApi.getAllAdmin({ size: 5, page: 0 }),
             productApi.getAllAdmin({ size: 1, page: 0 }),
-            userApi.getAll(),
+            userApi.getAll({ size: 5, page: 0 }),
           ]);
 
         setStats(statsResponse);
         setRecentOrders(ordersResponse.content || []);
         setTotalProducts(productsResponse.totalElements || 0);
-        setTotalUsers(usersResponse.length);
-        setRecentUsers(usersResponse.slice(0, 5));
+        setTotalUsers(usersResponse.totalElements || usersResponse.content?.length || 0);
+        setRecentUsers(usersResponse.content || []);
       } catch (error) {
         console.error("Failed to fetch dashboard data", error);
       } finally {
