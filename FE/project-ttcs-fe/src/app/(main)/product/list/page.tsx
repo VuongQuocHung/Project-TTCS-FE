@@ -35,6 +35,7 @@ function ProductListContent() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [priceError, setPriceError] = useState<string | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0); // Tổng số sản phẩm phù hợp với bộ lọc (không phải số sản phẩm trên trang hiện tại)
   const [numberOfElements, setNumberOfElements] = useState(0); // Số sản phẩm thực tế trên trang hiện tại (có thể nhỏ hơn PAGE_SIZE nếu là trang cuối hoặc không có sản phẩm nào)
@@ -43,8 +44,15 @@ function ProductListContent() {
   const q = searchParams.get("q") || "";
   const brandId = searchParams.get("brandId");
   const categoryId = searchParams.get("categoryId");
+  const minPriceParam = searchParams.get("minPrice");
+  const maxPriceParam = searchParams.get("maxPrice");
   const pageParam = Number(searchParams.get("page") || "0");
   const currentPage = Number.isFinite(pageParam) && pageParam >= 0 ? pageParam : 0;
+  const minPrice = minPriceParam && !Number.isNaN(Number(minPriceParam)) ? Number(minPriceParam) : undefined;
+  const maxPrice = maxPriceParam && !Number.isNaN(Number(maxPriceParam)) ? Number(maxPriceParam) : undefined;
+
+  const [minPriceInput, setMinPriceInput] = useState(minPriceParam || "");
+  const [maxPriceInput, setMaxPriceInput] = useState(maxPriceParam || "");
 
   useEffect(() => {
     let isMounted = true;
@@ -56,6 +64,8 @@ function ProductListContent() {
       keyword: q || undefined,
       brandId: brandId ? Number(brandId) : undefined,
       categoryId: categoryId ? Number(categoryId) : undefined,
+      minPrice,
+      maxPrice,
       page: currentPage,
       size: PAGE_SIZE
     };
@@ -85,7 +95,43 @@ function ProductListContent() {
     return () => {
       isMounted = false;
     };
-  }, [q, brandId, categoryId, currentPage]);
+  }, [q, brandId, categoryId, minPrice, maxPrice, currentPage]);
+
+  useEffect(() => {
+    setMinPriceInput(minPriceParam || "");
+    setMaxPriceInput(maxPriceParam || "");
+  }, [minPriceParam, maxPriceParam]);
+
+  useEffect(() => {
+    const min = minPriceInput.trim() ? Number(minPriceInput) : undefined;
+    const max = maxPriceInput.trim() ? Number(maxPriceInput) : undefined;
+
+    if (min !== undefined && max !== undefined && min > max) {
+      setPriceError("Min price must be <= max price.");
+      return;
+    }
+
+    setPriceError(null);
+
+    const timeoutId = window.setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (min !== undefined) {
+        params.set("minPrice", String(min));
+      } else {
+        params.delete("minPrice");
+      }
+      if (max !== undefined) {
+        params.set("maxPrice", String(max));
+      } else {
+        params.delete("maxPrice");
+      }
+      params.delete("page");
+      const query = params.toString();
+      router.push(query ? `/product/list?${query}` : "/product/list");
+    }, 400);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [minPriceInput, maxPriceInput, router, searchParams]);
 
   useEffect(() => {
     const fetchMetadata = async () => {
@@ -160,7 +206,7 @@ function ProductListContent() {
               <LayoutGrid className="w-4 h-4 text-blue-600" />
               <span>{totalElements || products.length} Sản phẩm</span>
             </div>
-            {(q || brandId || categoryId) && (
+            {(q || brandId || categoryId || minPriceParam || maxPriceParam) && (
               <button
                 onClick={() => router.push('/product/list')}
                 className="bg-red-50 text-red-600 border border-red-100 rounded-xl px-4 py-2 text-sm font-bold flex items-center gap-2 hover:bg-red-100 transition shadow-sm"
@@ -220,12 +266,34 @@ function ProductListContent() {
 
                 <div>
                   <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Khoảng giá</p>
-                  <div className="space-y-4">
-                    <input type="range" className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600" />
-                    <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase">
-                      <span>10.000.000₫</span>
-                      <span>100.000.000₫</span>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Từ</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={minPriceInput}
+                          onChange={(e) => setMinPriceInput(e.target.value)}
+                          placeholder="0"
+                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 focus:border-blue-600 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Đến</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={maxPriceInput}
+                          onChange={(e) => setMaxPriceInput(e.target.value)}
+                          placeholder="0"
+                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 focus:border-blue-600 outline-none"
+                        />
+                      </div>
                     </div>
+                    {priceError && (
+                      <p className="text-xs font-bold text-red-600">{priceError}</p>
+                    )}
                   </div>
                 </div>
               </div>
