@@ -23,7 +23,7 @@ export function AdminRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = user?.role === "ADMIN" || user?.role === "MANAGER";
 
   if (!user || !isAdmin) {
     return (

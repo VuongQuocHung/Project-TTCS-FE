@@ -22,6 +22,7 @@ import type { AdminUserRequest, Branch, Role, User } from "@/types/api";
 import type { ApiError } from "@/lib/api";
 
 const PAGE_SIZE = 10;
+const USER_FETCH_SIZE = 1000;
 
 const ROLE_OPTIONS: Role[] = ["CUSTOMER", "MANAGER", "ADMIN", "GUEST"];
 
@@ -45,20 +46,21 @@ export default function AdminUsersPage() {
 
     try {
       const [userResponse, branchResponse] = await Promise.all([
-        userApi.getAll(),
+        userApi.getAll({ page: 0, size: USER_FETCH_SIZE, sortBy: "id", sortDir: "asc" }),
         branchApi.getAllAdmin(),
       ]);
+      const userList = userResponse.content || [];
 
-      setUsers(userResponse);
+      setUsers(userList);
       setBranches(branchResponse);
       setRoleDrafts(
         Object.fromEntries(
-          userResponse.map((user) => [user.id ?? 0, String(user.role || "CUSTOMER")])
+          userList.map((user) => [user.id ?? 0, String(user.role || "CUSTOMER")])
         )
       );
       setBranchDrafts(
         Object.fromEntries(
-          userResponse.map((user) => [user.id ?? 0, user.branchId ? String(user.branchId) : ""])
+          userList.map((user) => [user.id ?? 0, user.branchId ? String(user.branchId) : ""])
         )
       );
     } catch (err) {

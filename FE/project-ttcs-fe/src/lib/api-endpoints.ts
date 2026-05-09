@@ -7,7 +7,9 @@ import type {
   PageCategory,
   PageOrder,
   PageProduct,
+  PageUser,
   PageVoucher,
+  QueryParams,
   BrandQueryParams,
   Branch,
   BranchFulfillment,
@@ -211,7 +213,8 @@ export const reviewApi = {
 };
 
 export const userApi = {
-  getAll: () => apiClient.GET<User[]>("/api/v1/admin/users", { auth: true }),
+  getAll: (params?: QueryParams) =>
+    apiClient.GET<PageUser>(`/api/v1/admin/users${toQueryString(params)}`, { auth: true }),
   getById: (id: number) =>
     apiClient.GET<User>(`/api/v1/admin/users/${id}`, { auth: true }),
   create: (data: AdminUserRequest) =>
