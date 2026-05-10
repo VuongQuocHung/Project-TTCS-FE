@@ -11,9 +11,7 @@ import {
   LayoutGrid,
   Star,
   Search as SearchIcon,
-  X,
-  Layers,
-  Award
+  X
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import Link from "next/link";
@@ -35,7 +33,6 @@ function ProductListContent() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [priceError, setPriceError] = useState<string | null>(null);
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0); // Tổng số sản phẩm phù hợp với bộ lọc (không phải số sản phẩm trên trang hiện tại)
   const [numberOfElements, setNumberOfElements] = useState(0); // Số sản phẩm thực tế trên trang hiện tại (có thể nhỏ hơn PAGE_SIZE nếu là trang cuối hoặc không có sản phẩm nào)
@@ -46,13 +43,21 @@ function ProductListContent() {
   const categoryId = searchParams.get("categoryId");
   const minPriceParam = searchParams.get("minPrice");
   const maxPriceParam = searchParams.get("maxPrice");
-  const pageParam = Number(searchParams.get("page") || "0");
-  const currentPage = Number.isFinite(pageParam) && pageParam >= 0 ? pageParam : 0;
+  const pageParam = Number(searchParams.get("page") || "1");
+  const currentPage = Number.isFinite(pageParam) && pageParam > 0 ? pageParam - 1 : 0;
   const minPrice = minPriceParam && !Number.isNaN(Number(minPriceParam)) ? Number(minPriceParam) : undefined;
   const maxPrice = maxPriceParam && !Number.isNaN(Number(maxPriceParam)) ? Number(maxPriceParam) : undefined;
 
   const [minPriceInput, setMinPriceInput] = useState(minPriceParam || "");
   const [maxPriceInput, setMaxPriceInput] = useState(maxPriceParam || "");
+  const minPriceInputValue = minPriceInput.trim() ? Number(minPriceInput) : undefined;
+  const maxPriceInputValue = maxPriceInput.trim() ? Number(maxPriceInput) : undefined;
+  const priceError =
+    minPriceInputValue !== undefined &&
+    maxPriceInputValue !== undefined &&
+    minPriceInputValue > maxPriceInputValue
+      ? "Min price must be <= max price."
+      : null;
 
   useEffect(() => {
     let isMounted = true;
@@ -98,30 +103,35 @@ function ProductListContent() {
   }, [q, brandId, categoryId, minPrice, maxPrice, currentPage]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMinPriceInput(minPriceParam || "");
     setMaxPriceInput(maxPriceParam || "");
   }, [minPriceParam, maxPriceParam]);
 
   useEffect(() => {
-    const min = minPriceInput.trim() ? Number(minPriceInput) : undefined;
-    const max = maxPriceInput.trim() ? Number(maxPriceInput) : undefined;
+    if (priceError) return;
 
-    if (min !== undefined && max !== undefined && min > max) {
-      setPriceError("Min price must be <= max price.");
+    const nextMinPriceParam = minPriceInputValue !== undefined ? String(minPriceInputValue) : null;
+    const nextMaxPriceParam = maxPriceInputValue !== undefined ? String(maxPriceInputValue) : null;
+    const currentMinPriceParam = minPriceParam || null;
+    const currentMaxPriceParam = maxPriceParam || null;
+
+    if (
+      nextMinPriceParam === currentMinPriceParam &&
+      nextMaxPriceParam === currentMaxPriceParam
+    ) {
       return;
     }
 
-    setPriceError(null);
-
     const timeoutId = window.setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
-      if (min !== undefined) {
-        params.set("minPrice", String(min));
+      if (minPriceInputValue !== undefined) {
+        params.set("minPrice", String(minPriceInputValue));
       } else {
         params.delete("minPrice");
       }
-      if (max !== undefined) {
-        params.set("maxPrice", String(max));
+      if (maxPriceInputValue !== undefined) {
+        params.set("maxPrice", String(maxPriceInputValue));
       } else {
         params.delete("maxPrice");
       }
@@ -131,7 +141,15 @@ function ProductListContent() {
     }, 400);
 
     return () => window.clearTimeout(timeoutId);
-  }, [minPriceInput, maxPriceInput, router, searchParams]);
+  }, [
+    minPriceInputValue,
+    maxPriceInputValue,
+    minPriceParam,
+    maxPriceParam,
+    priceError,
+    router,
+    searchParams
+  ]);
 
   useEffect(() => {
     const fetchMetadata = async () => {
@@ -165,11 +183,7 @@ function ProductListContent() {
   const updatePage = (nextPage: number) => {
     if (nextPage < 0 || nextPage >= totalPages || nextPage === currentPage) return;
     const params = new URLSearchParams(searchParams.toString());
-    if (nextPage === 0) {
-      params.delete("page");
-    } else {
-      params.set("page", String(nextPage));
-    }
+    params.set("page", String(nextPage + 1));
     const query = params.toString();
     router.push(query ? `/product/list?${query}` : "/product/list");
   };
