@@ -113,21 +113,21 @@ public class AuthController {
             }
         }
 
-        return ResponseEntity.badRequest().body("Invalid refresh token");
+        return ResponseEntity.badRequest().body("Token làm mới không hợp lệ");
     }
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            return ResponseEntity.badRequest().body("Username is already taken!");
+            return ResponseEntity.badRequest().body("Tên đăng nhập đã được sử dụng!");
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            return ResponseEntity.badRequest().body("Email is already in use!");
+            return ResponseEntity.badRequest().body("Email đã được sử dụng!");
         }
 
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            return ResponseEntity.badRequest().body("Passwords do not match!");
+            return ResponseEntity.badRequest().body("Mật khẩu xác nhận không khớp!");
         }
 
         String verificationToken = java.util.UUID.randomUUID().toString();
@@ -153,39 +153,39 @@ public class AuthController {
             System.err.println("Failed to send verification email: " + e.getMessage());
         }
 
-        return ResponseEntity.ok("User registered successfully! Please check your email to verify your account.");
+        return ResponseEntity.ok("Đăng ký tài khoản thành công! Vui lòng kiểm tra email để xác thực tài khoản.");
     }
 
     @PostMapping("/verify-email")
     public ResponseEntity<String> verifyEmail(@RequestBody java.util.Map<String, String> request) {
         String token = request.get("token");
         if (token == null || token.isBlank()) {
-            return ResponseEntity.badRequest().body("Token is required");
+            return ResponseEntity.badRequest().body("Token là bắt buộc!");
         }
 
         User user = userRepository.findByVerificationToken(token)
                 .orElse(null);
 
         if (user == null) {
-            return ResponseEntity.badRequest().body("Invalid verification token");
+            return ResponseEntity.badRequest().body("Mã xác thực không hợp lệ!");
         }
 
         user.setEnabled(true);
         user.setVerificationToken(null);
         userRepository.save(user);
 
-        return ResponseEntity.ok("Email verified successfully. You can now login.");
+        return ResponseEntity.ok("Xác thực email thành công. Bạn đã có thể đăng nhập.");
     }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         userService.processForgotPassword(request.getEmail());
-        return ResponseEntity.ok("Password reset email sent successfully");
+        return ResponseEntity.ok("Email hướng dẫn đặt lại mật khẩu đã được gửi đi.");
     }
 
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         userService.resetPassword(request.getToken(), request.getNewPassword());
-        return ResponseEntity.ok("Password reset successfully");
+        return ResponseEntity.ok("Đặt lại mật khẩu thành công!");
     }
 }

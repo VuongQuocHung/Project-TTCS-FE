@@ -161,23 +161,23 @@ public class UserService {
     @Transactional
     public void processForgotPassword(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with this email"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng với email này!"));
         
         String token = java.util.UUID.randomUUID().toString();
         user.setResetToken(token);
         user.setResetTokenExpiry(java.time.LocalDateTime.now().plusHours(1));
         userRepository.save(user);
         
-        emailService.sendResetPasswordEmail(user.getEmail(), token);
+        emailService.sendResetPasswordEmail(user.getEmail(), user.getFullName(), token);
     }
 
     @Transactional
     public void resetPassword(String token, String newPassword) {
         User user = userRepository.findByResetToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid or expired token"));
+                .orElseThrow(() -> new RuntimeException("Mã xác thực không hợp lệ hoặc đã hết hạn!"));
         
         if (user.getResetTokenExpiry().isBefore(java.time.LocalDateTime.now())) {
-            throw new RuntimeException("Token has expired");
+            throw new RuntimeException("Mã xác thực đã hết hạn!");
         }
         
         user.setPassword(passwordEncoder.encode(newPassword));
