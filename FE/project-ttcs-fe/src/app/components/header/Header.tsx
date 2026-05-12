@@ -4,15 +4,14 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
-import { branchApi, categoryApi } from "@/lib/api-endpoints";
-import type { Branch, Category } from "@/types/api";
+import { categoryApi } from "@/lib/api-endpoints";
+import type { Category } from "@/types/api";
 import { 
   ShoppingCart, 
   Search, 
   User, 
   LogOut, 
   LayoutGrid, 
-  MapPin, 
   ChevronDown,
   ShieldAlert,
   Ticket
@@ -27,22 +26,14 @@ export const Header = () => {
   const [isMiniCartOpen, setIsMiniCartOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
-  const [isBranchMenuOpen, setIsBranchMenuOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchHeaderData = async () => {
       try {
-        const [categoryList, branchList] = await Promise.all([
-          categoryApi.getAllPublic(),
-          branchApi.getAllPublic(),
-        ]);
+        const categoryList = await categoryApi.getAllPublic();
         setCategories(categoryList || []);
-        setBranches(branchList || []);
-        setSelectedBranch(branchList?.[0] || null);
       } catch (error) {
         console.error("Failed to fetch header data:", error);
       }
@@ -72,10 +63,7 @@ export const Header = () => {
         <div className="relative">
           <button
             type="button"
-            onClick={() => {
-              setIsCategoryMenuOpen((open) => !open);
-              setIsBranchMenuOpen(false);
-            }}
+            onClick={() => setIsCategoryMenuOpen((open) => !open)}
             className="flex items-center gap-[6px] bg-white/20 hover:bg-white/30 transition px-[12px] h-[38px] rounded-[8px] text-[14px] font-medium group"
           >
             <LayoutGrid size={16} className="group-hover:rotate-90 transition-transform duration-300" />
@@ -110,57 +98,6 @@ export const Header = () => {
             </div>
           )}
         </div>
-        {/* LOCATION */}
-        <div className="relative flex items-center gap-[6px] bg-white/20 hover:bg-white/30 transition px-[12px] h-[38px] rounded-[8px] text-[14px]">
-          <MapPin size={16} />
-          <div className="flex flex-col text-[10px] leading-tight">
-            <span className="opacity-70">Xem giá tại</span>
-            <button
-              type="button"
-              onClick={() => {
-                setIsBranchMenuOpen((open) => !open);
-                setIsCategoryMenuOpen(false);
-              }}
-              className="flex items-center gap-1 font-bold text-[12px] max-w-[110px]"
-            >
-              <span className="truncate">{selectedBranch?.name || "Hà Nội"}</span>
-              <ChevronDown size={12} className={`shrink-0 transition-transform ${isBranchMenuOpen ? "rotate-180" : ""}`} />
-            </button>
-          </div>
-
-          {isBranchMenuOpen && (
-            <div className="absolute left-0 top-full mt-2 w-72 rounded-xl bg-white p-2 text-slate-700 shadow-xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
-              <p className="px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-400">
-                Chọn khu vực
-              </p>
-              {branches.length > 0 ? (
-                branches.map((branch) => (
-                  <button
-                    key={branch.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedBranch(branch);
-                      setIsBranchMenuOpen(false);
-                    }}
-                    className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
-                      selectedBranch?.id === branch.id
-                        ? "bg-red-50 text-red-600 font-bold"
-                        : "hover:bg-slate-50"
-                    }`}
-                  >
-                    <span className="block font-bold">{branch.name}</span>
-                    {branch.address ? (
-                      <span className="block text-xs text-slate-400 mt-0.5 truncate">{branch.address}</span>
-                    ) : null}
-                  </button>
-                ))
-              ) : (
-                <p className="px-3 py-2 text-sm text-slate-400">Chưa có chi nhánh</p>
-              )}
-            </div>
-          )}
-        </div>
-
         {/* SEARCH */}
         <form 
           onSubmit={handleSearch}

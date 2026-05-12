@@ -1,7 +1,27 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { branchApi } from "@/lib/api-endpoints";
+import type { Branch } from "@/types/api";
 import { Mail, Phone, MapPin } from "lucide-react";
 import { FaFacebook, FaInstagram, FaTwitter, FaYoutube } from "react-icons/fa";
 
 export const Footer = () => {
+  const [branches, setBranches] = useState<Branch[]>([]);
+
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const data = await branchApi.getAllPublic();
+        setBranches(data || []);
+      } catch (error) {
+        console.error("Failed to fetch branches:", error);
+      }
+    };
+
+    void fetchBranches();
+  }, []);
+
   return (
     <footer className="bg-slate-900 text-slate-300 pt-16 pb-8 border-t border-slate-800">
       <div className="max-w-[1200px] mx-auto px-6">
@@ -56,6 +76,31 @@ export const Footer = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="border-t border-slate-800 pt-10 mb-10">
+          <h4 className="text-white font-bold mb-6">Hệ thống chi nhánh</h4>
+          {branches.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {branches.map((branch) => (
+                <div key={branch.id} className="rounded-lg border border-slate-800 bg-slate-950/40 p-5">
+                  <h5 className="text-white font-bold mb-3">{branch.name || "Chi nhánh VPH STORE"}</h5>
+                  <div className="space-y-3 text-sm">
+                    <p className="flex items-start gap-3">
+                      <MapPin className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                      <span>{branch.address || "Đang cập nhật địa chỉ"}</span>
+                    </p>
+                    <p className="flex items-center gap-3">
+                      <Phone className="w-4 h-4 text-blue-500 shrink-0" />
+                      <span>{branch.phone || "Đang cập nhật số điện thoại"}</span>
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">Chưa có thông tin chi nhánh.</p>
+          )}
         </div>
 
         <div className="pt-8 border-t border-slate-800 text-center text-xs opacity-50">
