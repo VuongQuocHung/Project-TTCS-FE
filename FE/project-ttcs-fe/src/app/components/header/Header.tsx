@@ -4,8 +4,8 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
-import { categoryApi } from "@/lib/api-endpoints";
-import type { Category } from "@/types/api";
+import { brandApi } from "@/lib/api-endpoints";
+import type { Brand } from "@/types/api";
 import { 
   ShoppingCart, 
   Search, 
@@ -25,15 +25,15 @@ export const Header = () => {
   const router = useRouter();
   const [isMiniCartOpen, setIsMiniCartOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [isBrandMenuOpen, setIsBrandMenuOpen] = useState(false);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchHeaderData = async () => {
       try {
-        const categoryList = await categoryApi.getAllPublic();
-        setCategories(categoryList || []);
+        const brandList = await brandApi.getAllPublic();
+        setBrands(brandList || []);
       } catch (error) {
         console.error("Failed to fetch header data:", error);
       }
@@ -59,41 +59,41 @@ export const Header = () => {
           <span className="tracking-tighter">VPH STORE</span>
         </Link>
 
-        {/* DANH MỤC */}
+        {/* THƯƠNG HIỆU */}
         <div className="relative">
           <button
             type="button"
-            onClick={() => setIsCategoryMenuOpen((open) => !open)}
+            onClick={() => setIsBrandMenuOpen((open) => !open)}
             className="flex items-center gap-[6px] bg-white/20 hover:bg-white/30 transition px-[12px] h-[38px] rounded-[8px] text-[14px] font-medium group"
           >
             <LayoutGrid size={16} className="group-hover:rotate-90 transition-transform duration-300" />
-            <span>Danh mục</span>
-            <ChevronDown size={14} className={`transition-transform ${isCategoryMenuOpen ? "rotate-180" : ""}`} />
+            <span>Thương hiệu</span>
+            <ChevronDown size={14} className={`transition-transform ${isBrandMenuOpen ? "rotate-180" : ""}`} />
           </button>
 
-          {isCategoryMenuOpen && (
+          {isBrandMenuOpen && (
             <div className="absolute left-0 top-full mt-2 w-64 rounded-xl bg-white p-2 text-slate-700 shadow-xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
               <Link
                 href="/product/list"
-                onClick={() => setIsCategoryMenuOpen(false)}
+                onClick={() => setIsBrandMenuOpen(false)}
                 className="block rounded-lg px-3 py-2 text-sm font-bold hover:bg-red-50 hover:text-red-600"
               >
-                Tất cả danh mục
+                Tất cả thương hiệu
               </Link>
               <div className="my-1 h-px bg-slate-100" />
-              {categories.length > 0 ? (
-                categories.map((category) => (
+              {brands.length > 0 ? (
+                brands.map((brand) => (
                   <Link
-                    key={category.id}
-                    href={`/product/list?categoryId=${category.id}`}
-                    onClick={() => setIsCategoryMenuOpen(false)}
+                    key={brand.id}
+                    href={`/product/list?brandId=${brand.id}`}
+                    onClick={() => setIsBrandMenuOpen(false)}
                     className="block rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-50 hover:text-red-600"
                   >
-                    {category.name || `Danh mục #${category.id}`}
+                    {brand.name || `Thương hiệu #${brand.id}`}
                   </Link>
                 ))
               ) : (
-                <p className="px-3 py-2 text-sm text-slate-400">Chưa có danh mục</p>
+                <p className="px-3 py-2 text-sm text-slate-400">Chưa có thương hiệu</p>
               )}
             </div>
           )}

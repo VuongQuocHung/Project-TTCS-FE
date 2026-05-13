@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { productApi } from "@/lib/api-endpoints";
-import type { Product } from "@/types/api";
+import { brandApi, productApi } from "@/lib/api-endpoints";
+import type { Brand, Product } from "@/types/api";
 import { 
   Zap, 
   ShoppingBag, 
@@ -13,27 +13,25 @@ import {
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { CountdownTimer } from "@/app/components/common/CountdownTimer";
-import { categoryApi } from "@/lib/api-endpoints";
-import type { Category } from "@/types/api";
 import { getPrimaryImage, getSpecValue } from "@/lib/format";
 
 export default function HomePage() {
   const { addToCart } = useCart();
   const [flashSaleProducts, setFlashSaleProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchHomeData = async () => {
       try {
-        const [prodRes, catRes] = await Promise.all([
+        const [prodRes, brandRes] = await Promise.all([
           productApi.getAll({ size: 8 }),
-          categoryApi.getAllPublic()
+          brandApi.getAllPublic()
         ]);
 
         const allProducts = prodRes.content || [];
         setFlashSaleProducts(allProducts.slice(-4));
-        setCategories(catRes || []);
+        setBrands(brandRes || []);
       } catch (error) {
         console.error("Failed to fetch home data:", error);
       } finally {
@@ -42,6 +40,14 @@ export default function HomePage() {
     };
     fetchHomeData();
   }, []);
+
+  const featuredBrandNames = ["Lenovo", "MSI", "Dell"];
+  const getBrandByName = (brandName: string) =>
+    brands.find((brand) => brand.name?.toLowerCase() === brandName.toLowerCase());
+  const getBrandLink = (brandName: string) => {
+    const brand = getBrandByName(brandName);
+    return brand?.id ? `/product/list?brandId=${brand.id}` : `/product/list?q=${encodeURIComponent(brandName)}`;
+  };
 
   return (
     <div className="bg-slate-50 min-h-screen font-sans pb-20">
@@ -80,24 +86,27 @@ export default function HomePage() {
           <div className="absolute top-1/2 right-[-10%] translate-y-[-50%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]" />
         </div>
 
-        {/* CATEGORY GRID */}
+        {/* BRAND GRID */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-          {categories.slice(0, 3).map((c) => (
-            // Category card đổi sang Link, click vào chuyển tới list theo categoryId.
+          {featuredBrandNames.map((brandName) => {
+            const brand = getBrandByName(brandName);
+
+            return (
             <Link
-              key={c.id}
-              href={c.id ? `/product/list?categoryId=${c.id}` : "/product/list"}
+              key={brandName}
+              href={getBrandLink(brandName)}
               className="group bg-white p-8 rounded-2xl border border-slate-200 cursor-pointer shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 flex items-center gap-6"
             >
               <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                  <Layers className="w-6 h-6" />
               </div>
               <div>
-                <p className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{c.name}</p>
-                <p className="text-sm text-slate-500 line-clamp-1">{c.description || "Khám phá ngay"}</p>
+                <p className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{brand?.name || brandName}</p>
+                <p className="text-sm text-slate-500 line-clamp-1">Xem san pham {brand?.name || brandName}</p>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
 
         {/* FLASH SALE SECTION */}
