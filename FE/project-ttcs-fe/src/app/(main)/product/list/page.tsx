@@ -11,7 +11,9 @@ import {
   LayoutGrid,
   Star,
   Search as SearchIcon,
-  X
+  X,
+  Scale,
+  Check
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import Link from "next/link";
@@ -21,6 +23,14 @@ import { Pagination } from "@/app/components/common/Pagination";
 import { AutoRefresh } from "@/app/components/common/AutoRefresh";
 import { getPrimaryImage, getSpecValue } from "@/lib/format";
 import type { ApiError } from "@/lib/api";
+import {
+  canAddCompare,
+  clearCompareIds,
+  getMaxCompare,
+  readCompareIds,
+  toggleCompareId,
+  writeCompareIds
+} from "@/lib/compare";
 
 const PAGE_SIZE = 6;
 
@@ -37,6 +47,8 @@ function ProductListContent() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0); // Tổng số sản phẩm phù hợp với bộ lọc (không phải số sản phẩm trên trang hiện tại)
   const [numberOfElements, setNumberOfElements] = useState(0); // Số sản phẩm thực tế trên trang hiện tại (có thể nhỏ hơn PAGE_SIZE nếu là trang cuối hoặc không có sản phẩm nào)
+  const [compareIds, setCompareIds] = useState<number[]>([]);
+  const [compareNotice, setCompareNotice] = useState<string | null>(null);
 
   // Filter states
   const q = searchParams.get("q") || "";
@@ -95,6 +107,14 @@ function ProductListContent() {
   useEffect(() => {
     void fetchProducts(true);
   }, [fetchProducts]);
+
+  useEffect(() => {
+    setCompareIds(readCompareIds());
+  }, []);
+
+  useEffect(() => {
+    writeCompareIds(compareIds);
+  }, [compareIds]);
 
   useEffect(() => {
     setMinPriceInput(minPriceParam || "");
@@ -187,6 +207,24 @@ function ProductListContent() {
       style: "currency",
       currency: "VND",
     }).format(value);
+  };
+
+  const handleToggleCompare = (productId?: number) => {
+    if (!productId) return;
+    setCompareNotice(null);
+    setCompareIds((prev) => {
+      if (!canAddCompare(prev) && !prev.includes(productId)) {
+        setCompareNotice(`Chi duoc chon toi da ${getMaxCompare()} san pham de so sanh.`);
+        return prev;
+      }
+      return toggleCompareId(prev, productId);
+    });
+  };
+
+  const handleResetCompare = () => {
+    setCompareIds([]);
+    clearCompareIds();
+    setCompareNotice(null);
   };
 
 
@@ -361,6 +399,22 @@ function ProductListContent() {
                         <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-md px-2 py-1 rounded-lg text-[10px] font-black text-slate-800 border border-white">
                           <span>HOT</span>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleCompare(p.id)}
+                          className={`absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wide border transition ${
+                            compareIds.includes(p.id || -1)
+                              ? "bg-emerald-600 text-white border-emerald-600"
+                              : "bg-white/80 text-slate-700 border-white hover:border-emerald-300"
+                          }`}
+                        >
+                          {compareIds.includes(p.id || -1) ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <Scale className="w-3 h-3" />
+                          )}
+                          {compareIds.includes(p.id || -1) ? "Đã chọn" : "So sánh"}
+                        </button>
                       </div>
 
                       <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors mb-2 line-clamp-2 min-h-[40px]">
@@ -422,6 +476,39 @@ function ProductListContent() {
           </main>
         </div>
       </div>
+
+      {compareIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[min(960px,92vw)]">
+          <div className="rounded-3xl border border-slate-200 bg-white/95 backdrop-blur shadow-2xl shadow-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Danh sách so sánh</p>
+              <p className="text-sm font-bold text-slate-800 mt-1">
+                Đã chọn {compareIds.length}/{getMaxCompare()} sản phẩm
+              </p>
+              {compareNotice && (
+                <p className="text-xs font-bold text-amber-600 mt-1">{compareNotice}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleResetCompare}
+                className="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:border-slate-300 hover:text-slate-800"
+              >
+                Đặt lại
+              </button>
+              <button
+                type="button"
+                disabled={compareIds.length < 2}
+                onClick={() => router.push("/product/compare")}
+                className="rounded-full bg-slate-900 px-5 py-2 text-xs font-black text-white shadow-lg shadow-slate-200 disabled:opacity-50 hover:bg-blue-600"
+              >
+                So sánh ngay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

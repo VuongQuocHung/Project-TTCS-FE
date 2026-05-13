@@ -7,9 +7,9 @@ import type { ApiError } from "@/lib/api";
 import type { AiChatResponse, AiProductSuggestion } from "@/types/api";
 
 const DEFAULT_PROMPTS = [
-  "Goi y laptop hoc tap duoi 15 trieu",
-  "Laptop do hoa tot, man hinh dep",
-  "Laptop pin trau de di hoc",
+  "Gợi ý laptop học tập dưới 15 triệu",
+  "Laptop đồ họa tốt, màn hình đẹp",
+  "Laptop pin trâu để đi học",
 ];
 
 type ChatMessage = {
@@ -29,7 +29,7 @@ export function AiChatWidget() {
       id: "intro",
       role: "assistant",
       content:
-        "Xin chao! Minh co the tu van laptop va goi y san pham cho ban. Hay dat cau hoi nhe.",
+        "Xin chào! Mình có thể tư vấn laptop và gợi ý sản phẩm cho bạn. Hãy đặt câu hỏi nhé.",
     },
   ]);
 
@@ -70,7 +70,7 @@ export function AiChatWidget() {
         {
           id: `assistant-cooldown-${Date.now()}`,
           role: "assistant",
-          content: `Ban gui qua nhanh. Thu lai sau ${seconds}s.`,
+          content: `Bạn gửi quá nhanh. Thử lại sau ${seconds}s.`,
         },
       ]);
       return;
@@ -115,7 +115,7 @@ export function AiChatWidget() {
       const assistantMessage: ChatMessage = {
         id: `assistant-${messageId}`,
         role: "assistant",
-        content: response.reply || "Minh da nhan duoc yeu cau cua ban.",
+        content: response.reply || "Mình đã nhận được yêu cầu của bạn.",
         suggestions: response.suggestions || [],
       };
 
@@ -130,8 +130,8 @@ export function AiChatWidget() {
         role: "assistant",
         content:
           isRateLimited
-            ? "Xin loi, he thong dang qua tai. Thu lai sau it phut."
-            : `Xin loi, hien tai minh chua the tra loi. ${status}${detail}`.trim(),
+            ? "Xin lỗi, hệ thống đang quá tải. Thử lại sau ít phút."
+            : `Xin lỗi, hiện tại mình chưa thể trả lời. ${status}${detail}`.trim(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } finally {
@@ -150,9 +150,9 @@ export function AiChatWidget() {
             <div className="relative flex items-center justify-between">
               <div>
                 <p className="text-sm font-extrabold uppercase tracking-wide text-white">
-                  AI tu van laptop
+                  AI tư vấn laptop
                 </p>
-                <p className="text-xs text-white/85">Goi y san pham nhanh</p>
+                <p className="text-xs text-white/85">Gợi ý sản phẩm nhanh</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
@@ -160,7 +160,7 @@ export function AiChatWidget() {
                   type="button"
                   onClick={() => setOpen(false)}
                   className="text-white/80 hover:text-white"
-                  aria-label="Dong chat"
+                  aria-label="Đóng chat"
                 >
                   ✕
                 </button>
@@ -192,7 +192,7 @@ export function AiChatWidget() {
               {loading && (
                 <div className="flex justify-start">
                   <div className="max-w-[85%] rounded-2xl px-3 py-2 text-sm bg-white/90 text-slate-500 border border-slate-200">
-                    Dang xu ly...
+                    Đang xử lý...
                   </div>
                 </div>
               )}
@@ -201,7 +201,7 @@ export function AiChatWidget() {
             {suggestions.length > 0 && (
               <div className="border-t border-slate-100 px-4 py-4 bg-white">
                 <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">
-                  San pham goi y
+                  Sản phẩm gợi ý
                 </p>
                 <div className="space-y-2">
                   {suggestions.map((item) => (
@@ -211,7 +211,7 @@ export function AiChatWidget() {
                       className="block rounded-2xl border border-slate-200 px-3 py-2 text-xs text-slate-700 hover:border-emerald-300 hover:text-emerald-700 bg-gradient-to-r from-white to-slate-50"
                     >
                       <span className="font-semibold text-slate-900">
-                        {item.name || "San pham"}
+                        {item.name || "Sản phẩm"}
                       </span>
                       {(item.brandName || item.categoryName) && (
                         <span className="block text-[11px] text-slate-500 mt-0.5">
@@ -244,7 +244,7 @@ export function AiChatWidget() {
             <div className="flex items-center gap-2">
               <input
                 type="text"
-                placeholder="Nhap cau hoi..."
+                placeholder="Nhập câu hỏi..."
                 className="flex-1 rounded-full border border-slate-200 px-3 py-2 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-200"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
@@ -261,7 +261,7 @@ export function AiChatWidget() {
                 onClick={() => sendMessage(input)}
                 className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 hover:bg-slate-800"
               >
-                {cooldownMs > 0 ? `Doi ${Math.ceil(cooldownMs / 1000)}s` : "Gui"}
+                {cooldownMs > 0 ? `Đợi ${Math.ceil(cooldownMs / 1000)}s` : "Gửi"}
               </button>
             </div>
           </div>
@@ -274,7 +274,7 @@ export function AiChatWidget() {
           onClick={() => setOpen(true)}
           className="rounded-full bg-slate-900 text-white px-4 py-3 shadow-[0_16px_40px_-20px_rgba(15,23,42,0.8)] font-semibold text-sm hover:bg-slate-800"
         >
-          AI tu van
+          AI tư vấn
         </button>
       )}
     </div>
