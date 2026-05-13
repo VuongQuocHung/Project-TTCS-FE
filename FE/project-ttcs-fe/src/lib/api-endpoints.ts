@@ -41,6 +41,7 @@ import type {
   UpdateProfileRequest,
   User,
   Voucher,
+  VerifyEmailRequest,
 } from "@/types/api";
 
 const toQueryString = (params?: Record<string, unknown>): string => {
@@ -72,6 +73,8 @@ export const authApi = {
     apiClient.POST<string>("/api/v1/auth/forgot-password", data),
   resetPassword: (data: ResetPasswordRequest) =>
     apiClient.POST<string>("/api/v1/auth/reset-password", data),
+  verifyEmail: (data: VerifyEmailRequest) =>
+    apiClient.POST<string>("/api/v1/auth/verify-email", data),
   googleLogin: (data: GoogleLoginRequest) =>
     apiClient.POST<AuthResponse>("/api/v1/auth/google", data),
   refreshToken: (data: RefreshTokenRequest) =>

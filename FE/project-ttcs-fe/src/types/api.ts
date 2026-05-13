@@ -166,6 +166,10 @@ export interface ResetPasswordRequest {
   newPassword: string;
 }
 
+export interface VerifyEmailRequest {
+  token: string;
+}
+
 export interface RegisterRequest {
   username: string;
   email: string;
