@@ -283,10 +283,10 @@ export default function AdminUsersPage() {
                 <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   Chi nhánh
                 </th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <th className="px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                   Trạng thái
                 </th>
-                <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
+                <th className="px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">
                   Thao tác
                 </th>
               </tr>
@@ -363,7 +363,7 @@ export default function AdminUsersPage() {
                         <Shield className="w-3 h-3" />
                         {user.role || "CUSTOMER"}
                       </span>
-                      <div className="mt-3 flex items-center gap-2">
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
                         <select
                           value={roleDrafts[user.id ?? 0] || String(user.role || "CUSTOMER")}
                           onChange={(event) =>
@@ -397,7 +397,7 @@ export default function AdminUsersPage() {
                           {user.branchId ? `Chi nhánh #${user.branchId}` : "Chưa gán"}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <select
                           value={branchDrafts[user.id ?? 0] || ""}
                           onChange={(event) =>
@@ -406,7 +406,7 @@ export default function AdminUsersPage() {
                               [user.id ?? 0]: event.target.value,
                             }))
                           }
-                          className="min-w-[150px] px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium"
+                          className="w-40 px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium"
                         >
                           <option value="">Chọn chi nhánh</option>
                           {branches.map((branch) => (
@@ -425,12 +425,12 @@ export default function AdminUsersPage() {
                         </button>
                       </div>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-4 py-6">
                       <button
                         type="button"
                         onClick={() => handleToggleStatus(user)}
                         disabled={actionUserId === user.id}
-                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition ${
+                        className={`px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest whitespace-nowrap transition ${
                           user.enabled === false
                             ? "bg-red-50 text-red-600 hover:bg-red-100"
                             : "bg-green-50 text-green-700 hover:bg-green-100"
@@ -443,12 +443,12 @@ export default function AdminUsersPage() {
                           : "Vô hiệu hóa"}
                       </button>
                     </td>
-                    <td className="px-8 py-6 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-4 py-6 text-right">
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           type="button"
                           onClick={() => openEditModal(user)}
-                          className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition shadow-sm bg-white"
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition shadow-sm bg-white"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -456,7 +456,7 @@ export default function AdminUsersPage() {
                           type="button"
                           onClick={() => handleDeleteUser(user)}
                           disabled={actionUserId === user.id}
-                          className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition shadow-sm bg-white disabled:opacity-60"
+                          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition shadow-sm bg-white disabled:opacity-60"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>

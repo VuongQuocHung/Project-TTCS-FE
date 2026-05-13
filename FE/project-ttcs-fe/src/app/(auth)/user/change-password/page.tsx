@@ -27,6 +27,7 @@ function ChangePasswordForm() {
     confirmPassword: "",
   });
 
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };

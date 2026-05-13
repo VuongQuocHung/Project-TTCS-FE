@@ -211,14 +211,14 @@ function ProfileContent() {
                       {user?.username || "---"}
                     </p>
                   </div>
-                  <div className="space-y-1.5 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                  {/* <div className="space-y-1.5 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                       Branch ID
                     </p>
                     <p className="text-sm font-bold text-slate-900">
                       {user?.branchId ?? "Chưa gán chi nhánh"}
                     </p>
-                  </div>
+                  </div> */}
                 </div>
 
                 {error ? (
