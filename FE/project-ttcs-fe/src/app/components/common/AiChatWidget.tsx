@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { aiApi } from "@/lib/api-endpoints";
 import type { ApiError } from "@/lib/api";
@@ -37,6 +37,19 @@ export function AiChatWidget() {
   const cooldownMs = Math.max(0, cooldownUntil - now);
   const canSend = input.trim().length > 0 && !loading && cooldownMs === 0;
 
+  useEffect(() => {
+    if (!cooldownUntil) return undefined;
+    const remaining = cooldownUntil - Date.now();
+    if (remaining <= 0) {
+      setCooldownUntil(0);
+      return undefined;
+    }
+    const timerId = window.setTimeout(() => {
+      setCooldownUntil(0);
+    }, remaining);
+    return () => window.clearTimeout(timerId);
+  }, [cooldownUntil]);
+
   const suggestions = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i -= 1) {
       if (messages[i].suggestions && messages[i].suggestions?.length) {
@@ -49,8 +62,9 @@ export function AiChatWidget() {
   const sendMessage = async (text: string) => {
     const content = text.trim();
     if (!content) return;
-    if (cooldownMs > 0) {
-      const seconds = Math.ceil(cooldownMs / 1000);
+    const cooldownRemaining = Math.max(0, cooldownUntil - Date.now());
+    if (cooldownRemaining > 0) {
+      const seconds = Math.ceil(cooldownRemaining / 1000);
       setMessages((prev) => [
         ...prev,
         {
@@ -129,7 +143,7 @@ export function AiChatWidget() {
   return (
     <div className="fixed bottom-5 right-5 z-50">
       {open && (
-        <div className="w-[320px] sm:w-[360px] rounded-[24px] border border-slate-200/80 bg-white/95 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.6)] overflow-hidden ring-1 ring-slate-200/70 backdrop-blur">
+        <div className="w-[320px] sm:w-[360px] h-[520px] rounded-[24px] border border-slate-200/80 bg-white/95 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.6)] overflow-hidden ring-1 ring-slate-200/70 backdrop-blur flex flex-col">
           <div className="relative overflow-hidden px-4 py-3">
             <div className="absolute inset-0 bg-gradient-to-r from-amber-400 via-orange-400 to-rose-500 opacity-90" />
             <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-white/20 blur-2xl" />
@@ -154,62 +168,64 @@ export function AiChatWidget() {
             </div>
           </div>
 
-          <div className="max-h-[360px] overflow-y-auto px-4 py-4 space-y-3 bg-gradient-to-b from-white to-slate-50">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
+          <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50">
+            <div className="px-4 py-4 space-y-3">
+              {messages.map((message) => (
                 <div
-                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed shadow-sm ${
-                    message.role === "user"
-                      ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-[0_10px_24px_-18px_rgba(13,148,136,0.8)]"
-                      : "bg-white/90 text-slate-700 border border-slate-200"
+                  key={message.id}
+                  className={`flex ${
+                    message.role === "user" ? "justify-end" : "justify-start"
                   }`}
                 >
-                  {message.content}
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed shadow-sm ${
+                      message.role === "user"
+                        ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-[0_10px_24px_-18px_rgba(13,148,136,0.8)]"
+                        : "bg-white/90 text-slate-700 border border-slate-200"
+                    }`}
+                  >
+                    {message.content}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {loading && (
-              <div className="flex justify-start">
-                <div className="max-w-[85%] rounded-2xl px-3 py-2 text-sm bg-white/90 text-slate-500 border border-slate-200">
-                  Dang xu ly...
+              {loading && (
+                <div className="flex justify-start">
+                  <div className="max-w-[85%] rounded-2xl px-3 py-2 text-sm bg-white/90 text-slate-500 border border-slate-200">
+                    Dang xu ly...
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {suggestions.length > 0 && (
+              <div className="border-t border-slate-100 px-4 py-4 bg-white">
+                <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">
+                  San pham goi y
+                </p>
+                <div className="space-y-2">
+                  {suggestions.map((item) => (
+                    <Link
+                      key={item.id || item.name}
+                      href={item.id ? `/product/${item.id}` : "/product/list"}
+                      className="block rounded-2xl border border-slate-200 px-3 py-2 text-xs text-slate-700 hover:border-emerald-300 hover:text-emerald-700 bg-gradient-to-r from-white to-slate-50"
+                    >
+                      <span className="font-semibold text-slate-900">
+                        {item.name || "San pham"}
+                      </span>
+                      {(item.brandName || item.categoryName) && (
+                        <span className="block text-[11px] text-slate-500 mt-0.5">
+                          {[item.brandName, item.categoryName]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      )}
+                    </Link>
+                  ))}
                 </div>
               </div>
             )}
           </div>
-
-          {suggestions.length > 0 && (
-            <div className="border-t border-slate-100 px-4 py-4 bg-white">
-              <p className="text-xs font-semibold text-slate-500 mb-2 uppercase tracking-wide">
-                San pham goi y
-              </p>
-              <div className="space-y-2">
-                {suggestions.map((item) => (
-                  <Link
-                    key={item.id || item.name}
-                    href={item.id ? `/product/${item.id}` : "/product/list"}
-                    className="block rounded-2xl border border-slate-200 px-3 py-2 text-xs text-slate-700 hover:border-emerald-300 hover:text-emerald-700 bg-gradient-to-r from-white to-slate-50"
-                  >
-                    <span className="font-semibold text-slate-900">
-                      {item.name || "San pham"}
-                    </span>
-                    {(item.brandName || item.categoryName) && (
-                      <span className="block text-[11px] text-slate-500 mt-0.5">
-                        {[item.brandName, item.categoryName]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </span>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
 
           <div className="border-t border-slate-100 px-4 py-4 space-y-3 bg-white">
             <div className="flex flex-wrap gap-2">
