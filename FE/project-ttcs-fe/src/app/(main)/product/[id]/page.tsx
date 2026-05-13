@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ComponentPropsWithoutRef } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { branchApi, productApi, reviewApi } from "@/lib/api-endpoints";
 import type { Branch, Product, Review } from "@/types/api";
 import { 
@@ -18,7 +18,10 @@ import {
   Star,
   MapPin,
   Phone,
-  Store
+  Store,
+  Scale,
+  Check,
+  Trash2
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import Link from "next/link";
@@ -26,9 +29,18 @@ import { getPrimaryImage, getSpecValue } from "@/lib/format";
 import { resolveApiAssetUrl } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { AutoRefresh } from "@/app/components/common/AutoRefresh";
+import {
+  canAddCompare,
+  clearCompareIds,
+  getMaxCompare,
+  readCompareIds,
+  toggleCompareId,
+  writeCompareIds
+} from "@/lib/compare";
 
 export default function ProductDetailPage() {
   const { id } = useParams();
+  const router = useRouter();
   const { addToCart } = useCart();
   const { user } = useAuth();
   const [product, setProduct] = useState<Product | null>(null);
@@ -42,6 +54,8 @@ export default function ProductDetailPage() {
   const [reviewContent, setReviewContent] = useState("");
   const [reviewMessage, setReviewMessage] = useState<string | null>(null);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [compareIds, setCompareIds] = useState<number[]>([]);
+  const [compareNotice, setCompareNotice] = useState<string | null>(null);
 
   const fetchProductDetail = useCallback(async () => {
     if (!id) return;
@@ -77,6 +91,14 @@ export default function ProductDetailPage() {
   useEffect(() => {
     void fetchProductDetail();
   }, [fetchProductDetail]);
+
+  useEffect(() => {
+    setCompareIds(readCompareIds());
+  }, []);
+
+  useEffect(() => {
+    writeCompareIds(compareIds);
+  }, [compareIds]);
 
   const averageRating =
     reviews.length > 0
@@ -141,6 +163,24 @@ export default function ProductDetailPage() {
       </div>
     );
   }
+
+  const handleToggleCompare = () => {
+    if (!product?.id) return;
+    setCompareNotice(null);
+    setCompareIds((prev) => {
+      if (!canAddCompare(prev) && !prev.includes(product.id as number)) {
+        setCompareNotice(`Chi duoc chon toi da ${getMaxCompare()} san pham de so sanh.`);
+        return prev;
+      }
+      return toggleCompareId(prev, product.id as number);
+    });
+  };
+
+  const handleResetCompare = () => {
+    setCompareIds([]);
+    clearCompareIds();
+    setCompareNotice(null);
+  };
 
   const specItems = [
     { label: "CPU", val: getSpecValue(product, "cpu"), icon: <Cpu className="w-5 h-5 text-blue-600" /> },
@@ -307,6 +347,54 @@ export default function ProductDetailPage() {
                 ) : (
                   <p className="text-xs text-slate-400">Chưa có thông tin tồn kho.</p>
                 )}
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">So sánh sản phẩm</p>
+                    <p className="text-sm font-bold text-slate-700 mt-1">
+                      Đã chọn {compareIds.length}/{getMaxCompare()} sản phẩm
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleToggleCompare}
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-black uppercase tracking-wide border transition ${
+                      compareIds.includes(product.id || -1)
+                        ? "bg-emerald-600 text-white border-emerald-600"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-emerald-300"
+                    }`}
+                  >
+                    {compareIds.includes(product.id || -1) ? (
+                      <Check className="w-3.5 h-3.5" />
+                    ) : (
+                      <Scale className="w-3.5 h-3.5" />
+                    )}
+                    {compareIds.includes(product.id || -1) ? "Đã chọn" : "So sánh"}
+                  </button>
+                </div>
+                {compareNotice && (
+                  <p className="text-xs font-bold text-amber-600 mt-2">{compareNotice}</p>
+                )}
+                <div className="mt-3 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleResetCompare}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-2 text-[11px] font-bold text-slate-600 hover:text-slate-800"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Đặt lại
+                  </button>
+                  <button
+                    type="button"
+                    disabled={compareIds.length < 2}
+                    onClick={() => router.push("/product/compare")}
+                    className="rounded-full bg-slate-900 px-4 py-2 text-[11px] font-black text-white shadow-lg shadow-slate-200 disabled:opacity-50 hover:bg-blue-600"
+                  >
+                    So sánh ngay
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 gap-3 mb-8">
