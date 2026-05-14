@@ -186,6 +186,15 @@ export const branchApi = {
     }),
   delete: (id: number) =>
     apiClient.DELETE(`/api/v1/admin/branches/${id}`, { auth: true }),
+  getBranchDashboard: (id: number, month?: string) =>
+    apiClient.GET<DashboardStats>(
+      `/api/v1/admin/branches/${id}/dashboard${toQueryString({ month })}`,
+      { auth: true }
+    ),
+  getBranchLowStock: (id: number) =>
+    apiClient.GET<LowStock[]>(`/api/v1/admin/branches/${id}/low-stock`, {
+      auth: true,
+    }),
 };
 
 export const orderApi = {
@@ -228,10 +237,11 @@ export const orderApi = {
 };
 
 export const managerDashboardApi = {
-  getStats: () =>
-    apiClient.GET<DashboardStats>("/api/v1/manager/dashboard/stats", {
-      auth: true,
-    }),
+  getStats: (month?: string) =>
+    apiClient.GET<DashboardStats>(
+      `/api/v1/manager/dashboard/stats${toQueryString({ month })}`,
+      { auth: true }
+    ),
   getLowStock: () =>
     apiClient.GET<LowStock[]>("/api/v1/manager/dashboard/low-stock", {
       auth: true,
