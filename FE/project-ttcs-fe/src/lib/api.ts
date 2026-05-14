@@ -25,7 +25,9 @@ export function resolveApiAssetUrl(url?: string | null): string {
   ) {
     return normalizedUrl;
   }
-  if (normalizedUrl.startsWith("/uploads/")) return `${getApiBaseUrl()}${normalizedUrl}`;
+  if (normalizedUrl.startsWith("/uploads/") || normalizedUrl.startsWith("/media/")) {
+    return `${getApiBaseUrl()}${normalizedUrl}`;
+  }
   return normalizedUrl;
 }
 

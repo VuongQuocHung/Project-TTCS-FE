@@ -60,6 +60,8 @@ function ProductListContent() {
   const currentPage = Number.isFinite(pageParam) && pageParam > 0 ? pageParam - 1 : 0;
   const minPrice = minPriceParam && !Number.isNaN(Number(minPriceParam)) ? Number(minPriceParam) : undefined;
   const maxPrice = maxPriceParam && !Number.isNaN(Number(maxPriceParam)) ? Number(maxPriceParam) : undefined;
+  const sortBy = searchParams.get("sortBy") || "createdAt";
+  const sortDir = searchParams.get("sortDir") || "desc";
 
   const [minPriceInput, setMinPriceInput] = useState(minPriceParam || "");
   const [maxPriceInput, setMaxPriceInput] = useState(maxPriceParam || "");
@@ -76,22 +78,45 @@ function ProductListContent() {
     if (showLoading) setIsLoading(true);
     setError(null);
 
+    const isPriceSort = sortBy === "price";
     const params: ProductQueryParams = {
       keyword: q || undefined,
       brandId: brandId ? Number(brandId) : undefined,
       categoryId: categoryId ? Number(categoryId) : undefined,
       minPrice,
       maxPrice,
-      page: currentPage,
-      size: PAGE_SIZE
+      page: isPriceSort ? 0 : currentPage,
+      size: isPriceSort ? 1000 : PAGE_SIZE,
+      sortBy: isPriceSort ? "createdAt" : sortBy,
+      sortDir: sortDir
     };
 
     try {
       const res = await productApi.getAll(params);
-      setProducts(res.content || []);
-      setTotalPages(res.totalPages || 0);
-      setTotalElements(res.totalElements || 0);
-      setNumberOfElements(res.content?.length || 0);
+      let content = res.content || [];
+
+      if (isPriceSort) {
+        // 1. Sắp xếp toàn bộ dữ liệu (tối đa 1000 con)
+        content = [...content].sort((a, b) => {
+          const priceA = a.variants?.[0]?.price || 0;
+          const priceB = b.variants?.[0]?.price || 0;
+          return sortDir === "asc" ? priceA - priceB : priceB - priceA;
+        });
+        
+        // 2. Cắt mảng để phân trang thủ công ở FE
+        const startIndex = currentPage * PAGE_SIZE;
+        const pagedContent = content.slice(startIndex, startIndex + PAGE_SIZE);
+        
+        setProducts(pagedContent);
+        setTotalPages(Math.ceil(content.length / PAGE_SIZE));
+        setTotalElements(content.length);
+        setNumberOfElements(pagedContent.length);
+      } else {
+        setProducts(content);
+        setTotalPages(res.totalPages || 0);
+        setTotalElements(res.totalElements || 0);
+        setNumberOfElements(content.length);
+      }
     } catch (e) {
       const apiError = e as ApiError;
         setError(apiError?.message || "Không tải được danh sách sản phẩm");
@@ -102,7 +127,7 @@ function ProductListContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [q, brandId, categoryId, minPrice, maxPrice, currentPage]);
+  }, [q, brandId, categoryId, minPrice, maxPrice, currentPage, sortBy, sortDir]);
 
   useEffect(() => {
     void fetchProducts(true);
@@ -252,7 +277,24 @@ function ProductListContent() {
               <LayoutGrid className="w-4 h-4 text-blue-600" />
               <span>{totalElements || products.length} Sản phẩm</span>
             </div>
-            {(q || brandId || categoryId || minPriceParam || maxPriceParam) && (
+            <select
+              value={`${sortBy}-${sortDir}`}
+              onChange={(e) => {
+                const [sb, sd] = e.target.value.split("-");
+                const params = new URLSearchParams(searchParams.toString());
+                params.set("sortBy", sb);
+                params.set("sortDir", sd);
+                params.delete("page");
+                router.push(`/product/list?${params.toString()}`);
+              }}
+              className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-600 shadow-sm outline-none focus:border-blue-600 cursor-pointer"
+            >
+              <option value="createdAt-desc">Mới nhất</option>
+              <option value="price-asc">Giá tăng dần</option>
+              <option value="price-desc">Giá giảm dần</option>
+            </select>
+
+            {(q || brandId || categoryId || minPriceParam || maxPriceParam || sortBy !== "createdAt" || sortDir !== "desc") && (
               <button
                 onClick={() => router.push('/product/list')}
                 className="bg-red-50 text-red-600 border border-red-100 rounded-xl px-4 py-2 text-sm font-bold flex items-center gap-2 hover:bg-red-100 transition shadow-sm"

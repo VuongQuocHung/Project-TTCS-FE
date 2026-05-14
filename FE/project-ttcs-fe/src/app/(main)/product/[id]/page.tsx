@@ -26,7 +26,7 @@ import {
 import { useCart } from "@/context/CartContext";
 import Link from "next/link";
 import { getPrimaryImage, getSpecValue } from "@/lib/format";
-import { resolveApiAssetUrl } from "@/lib/api";
+import { resolveApiAssetUrl, getApiBaseUrl } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { AutoRefresh } from "@/app/components/common/AutoRefresh";
 import {
@@ -56,6 +56,8 @@ export default function ProductDetailPage() {
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [compareIds, setCompareIds] = useState<number[]>([]);
   const [compareNotice, setCompareNotice] = useState<string | null>(null);
+  const [showSpecsModal, setShowSpecsModal] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
   const fetchProductDetail = useCallback(async () => {
     if (!id) return;
@@ -182,21 +184,58 @@ export default function ProductDetailPage() {
     setCompareNotice(null);
   };
 
-  const specItems = [
-    { label: "CPU", val: getSpecValue(product, "cpu"), icon: <Cpu className="w-5 h-5 text-blue-600" /> },
-    { label: "RAM", val: getSpecValue(product, "ram"), icon: <Smartphone className="w-5 h-5 text-blue-600" /> },
-    { label: "Ổ cứng", val: getSpecValue(product, "storage"), icon: <HardDrive className="w-5 h-5 text-blue-600" /> },
-    { label: "Màn hình", val: getSpecValue(product, "screen"), icon: <Monitor className="w-5 h-5 text-blue-600" /> },
-    { label: "VGA", val: getSpecValue(product, "vga"), icon: <Gamepad2 className="w-5 h-5 text-blue-600" /> },
-  ].filter(i => i.val);
+  const currentVariant = product.variants?.[0];
+  let allSpecs: Record<string, unknown> = {};
+  if (currentVariant?.specsJson) {
+    if (typeof currentVariant.specsJson === "string") {
+      try { allSpecs = JSON.parse(currentVariant.specsJson); } catch {}
+    } else {
+      allSpecs = currentVariant.specsJson as Record<string, unknown>;
+    }
+  }
+
+  const specItems: { label: string; val: string; icon: React.ReactNode }[] = [];
+  const specsLowerMap = new Map<string, { key: string; val: string }>();
+  Object.entries(allSpecs).forEach(([k, v]) => {
+    if (v) specsLowerMap.set(k.toLowerCase().trim(), { key: k, val: String(v) });
+  });
+
+  const predefined = [
+    { label: "CPU", keys: ["cpu", "vi xử lý", "chipset"], icon: <Cpu className="w-5 h-5 text-blue-600" /> },
+    { label: "RAM", keys: ["ram", "dung lượng ram", "bộ nhớ trong"], icon: <Smartphone className="w-5 h-5 text-blue-600" /> },
+    { label: "Ổ CỨNG", keys: ["storage", "ổ cứng", "dung lượng ổ cứng"], icon: <HardDrive className="w-5 h-5 text-blue-600" /> },
+    { label: "MÀN HÌNH", keys: ["screen", "màn hình", "kích thước màn hình"], icon: <Monitor className="w-5 h-5 text-blue-600" /> },
+    { label: "VGA", keys: ["vga", "card đồ họa", "loại card đồ họa", "card màn hình", "card tích hợp"], icon: <Gamepad2 className="w-5 h-5 text-blue-600" /> },
+  ];
+
+  predefined.forEach(p => {
+    for (const k of p.keys) {
+      if (specsLowerMap.has(k)) {
+        specItems.push({ label: p.label, val: specsLowerMap.get(k)!.val, icon: p.icon });
+        specsLowerMap.delete(k);
+        break;
+      }
+    }
+  });
+
+  const remainingSpecs = Array.from(specsLowerMap.values());
+  for (let i = 0; i < remainingSpecs.length && specItems.length < 5; i++) {
+    specItems.push({ label: remainingSpecs[i].key.toUpperCase(), val: remainingSpecs[i].val, icon: <Box className="w-5 h-5 text-blue-600" /> });
+  }
 
   const branchById = new Map(
     branches
       .filter((branch) => branch.id !== undefined)
       .map((branch) => [branch.id as number, branch])
   );
-  const currentVariant = product.variants?.[0];
 
+  const processHtml = (html?: string | null) => {
+    if (!html) return "Thông tin mô tả sản phẩm đang được cập nhật...";
+    let processed = html.replace(/data-src=/gi, "src=");
+    processed = processed.replace(/((?:src|href)\s*=\s*(["']))\s*\/?(media)\//gi, `$1https://laptop88.vn/$3/`);
+    processed = processed.replace(/((?:src|href)\s*=\s*(["']))\s*\/?(uploads)\//gi, `$1${getApiBaseUrl()}/$3/`);
+    return processed;
+  };
   const branchStocks = Object.values(
     (currentVariant?.inventories || [])
       .filter((inventory) => Number(inventory.quantity ?? 0) > 0)
@@ -267,8 +306,22 @@ export default function ProductDetailPage() {
                 <Box className="w-5 h-5 text-blue-600" />
                 Mô tả sản phẩm
               </h3>
-              <div className="text-slate-600 leading-relaxed whitespace-pre-line text-sm">
-                {product.description || "Thông tin mô tả sản phẩm đang được cập nhật..."}
+              <div className="relative">
+                <div 
+                  className={`text-slate-600 leading-relaxed text-sm html-content transition-all duration-500 overflow-hidden ${showFullDescription ? 'max-h-[50000px]' : 'max-h-[400px]'}`}
+                  dangerouslySetInnerHTML={{ __html: processHtml(product.description) }}
+                />
+                {!showFullDescription && (
+                  <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+                )}
+              </div>
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={() => setShowFullDescription(!showFullDescription)}
+                  className="px-6 py-2 border border-blue-600 text-blue-600 font-bold rounded-full hover:bg-blue-50 transition-colors"
+                >
+                  {showFullDescription ? "Thu gọn" : "Xem thêm"}
+                </button>
               </div>
             </div>
           </div>
@@ -314,42 +367,77 @@ export default function ProductDetailPage() {
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-600/5 rounded-full translate-x-12 translate-y-[-12px]" />
               </div>
 
-              <div className="mb-8">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">
-                  Còn hàng tại chi nhánh
-                </p>
-                {branchStocks.length > 0 ? (
-                  <div className="space-y-3">
-                    {branchStocks.map((stock) => (
-                      <div
-                        key={stock.branchId || stock.branchName}
-                        className="rounded-2xl border border-green-100 bg-green-50 p-4 text-sm"
-                      >
-                        <p className="flex items-center gap-2 font-black text-green-700">
-                          <Store className="w-4 h-4 shrink-0" />
-                          {stock.branchName}
-                        </p>
-                        <p className="mt-2 flex items-center gap-2 text-slate-600">
-                          <Phone className="w-4 h-4 shrink-0 text-green-600" />
-                          <span>{stock.phone || "Chưa có số điện thoại"}</span>
-                        </p>
-                        {/* <p className="mt-2 flex items-center gap-2 text-slate-600">
-                          <Box className="w-4 h-4 shrink-0 text-green-600" />
-                          <span>Tồn kho: {stock.quantity} sản phẩm</span>
-                        </p> */}
-                        <p className="mt-2 flex items-start gap-2 text-slate-600">
-                          <MapPin className="w-4 h-4 shrink-0 text-green-600 mt-0.5" />
-                          <span>{stock.address || "Chưa có địa chỉ"}</span>
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400">Chưa có thông tin tồn kho.</p>
-                )}
+              {/* 1. BUY BUTTON */}
+              <div className="grid grid-cols-1 gap-3 mb-6">
+                <button 
+                  onClick={() => {
+                    if (currentVariant?.id) {
+                      addToCart(currentVariant.id, 1);
+                    } else {
+                      alert("Sản phẩm chưa có biến thể");
+                    }
+                  }}
+                  className="bg-gradient-to-r from-red-600 to-orange-500 text-white font-black py-5 rounded-2xl flex flex-col items-center justify-center gap-1 hover:from-red-700 hover:to-orange-600 transition-all shadow-xl shadow-red-200 ring-4 ring-red-50 transform hover:-translate-y-1"
+                >
+                  <span className="flex items-center gap-2 text-xl">
+                    <ShoppingCart className="w-6 h-6" />
+                    ĐẶT MUA NGAY
+                  </span>
+                  <span className="text-xs font-medium text-white/90">
+                    Giao hàng tận nơi hoặc nhận tại cửa hàng
+                  </span>
+                </button>
+                <div className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest mt-2">
+                  Hỗ trợ trả góp 0% qua thẻ tín dụng
+                </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 mb-6">
+              {/* BENEFITS */}
+              <div className="space-y-4 pt-2 pb-6 border-b border-slate-100 mb-6">
+                <div className="flex items-center gap-4 text-sm text-slate-600">
+                  <ShieldCheck className="w-5 h-5 text-green-500" />
+                  <span>Bảo hành chính hãng 24 tháng</span>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-slate-600">
+                  <Truck className="w-5 h-5 text-blue-500" />
+                  <span>Miễn phí giao hàng nội thành</span>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-slate-600">
+                  <Clock className="w-5 h-5 text-blue-500" />
+                  <span>Giao hàng nhanh 2H Hà Nội & HCM</span>
+                </div>
+              </div>
+
+              {/* 2. SPECS BOX */}
+              <div className="bg-slate-900 p-6 rounded-3xl text-white shadow-xl shadow-slate-200 mb-8">
+                <h3 className="font-black text-lg mb-4 flex items-center gap-3 tracking-tighter">
+                  <Box className="w-5 h-5 text-blue-500" />
+                  Thông số nổi bật
+                </h3>
+                <div className="space-y-3">
+                  {specItems.map((item, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10 group">
+                      <div className="shrink-0">
+                        {item.icon}
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest leading-none mb-1">{item.label}</div>
+                        <div className="text-sm font-medium leading-tight group-hover:text-blue-200 transition-colors line-clamp-1">{item.val}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  onClick={() => setShowSpecsModal(true)}
+                  className="w-full mt-4 py-3 border border-white/20 text-white text-sm font-bold rounded-xl hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+                >
+                  Xem chi tiết thông số
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* 3. COMPARE */}
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 mb-8">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-black uppercase tracking-widest text-slate-400">So sánh sản phẩm</p>
@@ -397,58 +485,38 @@ export default function ProductDetailPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 mb-8">
-                <button 
-                  onClick={() => {
-                    if (currentVariant?.id) {
-                      addToCart(currentVariant.id, 1);
-                    } else {
-                      alert("Sản phẩm chưa có biến thể");
-                    }
-                  }}
-                  className="bg-blue-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 ring-4 ring-blue-50"
-                >
-                  <ShoppingCart className="w-5 h-5" />
-                  MUA NGAY
-                </button>
-                <div className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest mt-2">
-                  Hỗ trợ trả góp 0% qua thẻ tín dụng
-                </div>
-              </div>
-
-              <div className="space-y-4 pt-6 border-t border-slate-100">
-                <div className="flex items-center gap-4 text-sm text-slate-600">
-                  <ShieldCheck className="w-5 h-5 text-green-500" />
-                  <span>Bảo hành chính hãng 24 tháng</span>
-                </div>
-                <div className="flex items-center gap-4 text-sm text-slate-600">
-                  <Truck className="w-5 h-5 text-blue-500" />
-                  <span>Miễn phí giao hàng nội thành</span>
-                </div>
-                <div className="flex items-center gap-4 text-sm text-slate-600">
-                  <Clock className="w-5 h-5 text-blue-500" />
-                  <span>Giao hàng nhanh 2H Hà Nội & HCM</span>
-                </div>
-              </div>
-            </div>
-
-            {/* SPECS BOX */}
-            <div className="bg-slate-900 p-8 rounded-3xl text-white shadow-xl shadow-slate-200">
-              <h3 className="font-black text-lg mb-6 flex items-center gap-3 tracking-tighter">
-                <Box className="w-5 h-5 text-blue-500" />
-                Thông số kỹ thuật
-              </h3>
-              <div className="space-y-4">
-                {specItems.map((item, i) => (
-                  <div key={i} className="flex flex-col p-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 transition group">
-                    <div className="flex items-center gap-3 mb-2">
-                       {item.icon}
-                       <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">{item.label}</span>
-                    </div>
-                    <p className="text-sm font-medium leading-relaxed group-hover:text-white transition-colors uppercase">{item.val}</p>
+              {/* 4. BRANCH STOCKS */}
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-3">
+                  Còn hàng tại chi nhánh
+                </p>
+                {branchStocks.length > 0 ? (
+                  <div className="space-y-3">
+                    {branchStocks.map((stock) => (
+                      <div
+                        key={stock.branchId || stock.branchName}
+                        className="rounded-2xl border border-green-100 bg-green-50 p-4 text-sm"
+                      >
+                        <p className="flex items-center gap-2 font-black text-green-700">
+                          <Store className="w-4 h-4 shrink-0" />
+                          {stock.branchName}
+                        </p>
+                        <p className="mt-2 flex items-center gap-2 text-slate-600">
+                          <Phone className="w-4 h-4 shrink-0 text-green-600" />
+                          <span>{stock.phone || "Chưa có số điện thoại"}</span>
+                        </p>
+                        <p className="mt-2 flex items-start gap-2 text-slate-600">
+                          <MapPin className="w-4 h-4 shrink-0 text-green-600 mt-0.5" />
+                          <span>{stock.address || "Chưa có địa chỉ"}</span>
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <p className="text-xs text-slate-400">Chưa có thông tin tồn kho.</p>
+                )}
               </div>
+
             </div>
           </div>
         </div>
@@ -607,6 +675,43 @@ export default function ProductDetailPage() {
           </div>
         )}
       </div>
+
+      {/* SPECS MODAL */}
+      {showSpecsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setShowSpecsModal(false)}>
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="text-xl font-black text-slate-900 tracking-tighter flex items-center gap-2">
+                <Box className="w-6 h-6 text-blue-600" />
+                Thông số kỹ thuật chi tiết
+              </h3>
+              <button onClick={() => setShowSpecsModal(false)} className="p-2 text-slate-400 hover:text-slate-600 bg-white rounded-full shadow-sm">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <table className="w-full text-left border-collapse">
+                <tbody>
+                  {Object.entries(allSpecs).length > 0 ? (
+                    Object.entries(allSpecs).map(([key, val], i) => (
+                       <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+                         <td className="py-4 px-4 w-1/3 bg-slate-50/50 text-sm font-bold text-slate-700">{key}</td>
+                         <td className="py-4 px-4 text-sm text-slate-600 font-medium leading-relaxed">{String(val)}</td>
+                       </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td className="py-8 px-4 text-sm text-slate-500 font-medium text-center italic" colSpan={2}>
+                        Đang cập nhật thông số chi tiết...
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

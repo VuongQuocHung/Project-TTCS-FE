@@ -13,7 +13,13 @@ export function getPrimaryVariant(product?: Product | null): ProductVariant | un
 }
 
 export function getPrimaryImage(product?: Product | null) {
-  return resolveApiAssetUrl(getPrimaryVariant(product)?.images?.[0]?.imageUrl) || "/assets/images/loq.jpg";
+  const images = (product as any)?.images;
+  if (typeof images === "string") {
+    return resolveApiAssetUrl(images) || "/assets/images/loq.jpg";
+  }
+  const rootImage = images?.[0];
+  const imageUrl = typeof rootImage === "string" ? rootImage : rootImage?.imageUrl || getPrimaryVariant(product)?.images?.[0]?.imageUrl;
+  return resolveApiAssetUrl(imageUrl) || "/assets/images/loq.jpg";
 }
 
 export function formatSpecValue(value: unknown): string {
@@ -28,7 +34,16 @@ export function formatSpecValue(value: unknown): string {
 }
 
 export function getSpecValue(product: Product | null | undefined, key: string): string {
-  return formatSpecValue(getPrimaryVariant(product)?.specsJson?.[key]);
+  const variant = getPrimaryVariant(product);
+  let specs = variant?.specsJson;
+  if (typeof specs === "string") {
+    try {
+      specs = JSON.parse(specs);
+    } catch {
+      specs = undefined;
+    }
+  }
+  return formatSpecValue((specs as Record<string, unknown>)?.[key]);
 }
 
 export function getOrderStatusLabel(status?: OrderStatus | string) {

@@ -15,13 +15,7 @@ import {
 } from "@/lib/compare";
 import { ArrowLeft, CheckCircle2, Trash2 } from "lucide-react";
 
-const SPEC_ROWS = [
-  { label: "CPU", key: "cpu" },
-  { label: "RAM", key: "ram" },
-  { label: "Ổ cứng", key: "storage" },
-  { label: "Màn hình", key: "screen" },
-  { label: "VGA", key: "vga" }
-] as const;
+// Dynamic specs are calculated in the component
 
 export default function CompareProductsPage() {
   const router = useRouter();
@@ -71,6 +65,22 @@ export default function CompareProductsPage() {
       currency: "VND"
     }).format(value);
   };
+  const allSpecKeys = useMemo(() => {
+    const keys = new Set<string>();
+    products.forEach((p) => {
+      const variant = p.variants?.[0];
+      if (variant?.specsJson) {
+        let specsObj: Record<string, unknown> = {};
+        if (typeof variant.specsJson === "string") {
+          try { specsObj = JSON.parse(variant.specsJson); } catch {}
+        } else {
+          specsObj = variant.specsJson as Record<string, unknown>;
+        }
+        Object.keys(specsObj).forEach((k) => keys.add(k));
+      }
+    });
+    return Array.from(keys);
+  }, [products]);
 
   const compareTitle = useMemo(() => {
     if (compareIds.length === 0) return "Chưa có sản phẩm";
@@ -212,16 +222,29 @@ export default function CompareProductsPage() {
                     </div>
                   ))}
 
-                  {SPEC_ROWS.map((row) => (
-                    <Fragment key={row.key}>
+                  {allSpecKeys.map((key) => (
+                    <Fragment key={key}>
                       <div className="p-4 border-b border-slate-100 text-sm font-bold text-slate-600">
-                        {row.label}
+                        {key}
                       </div>
-                      {products.map((product) => (
-                        <div key={`${product.id}-${row.key}`} className="p-4 border-b border-slate-100 text-sm text-slate-700">
-                          {getSpecValue(product, row.key) || "-"}
-                        </div>
-                      ))}
+                      {products.map((product) => {
+                        let val = "-";
+                        const variant = product.variants?.[0];
+                        if (variant?.specsJson) {
+                          let specsObj: Record<string, unknown> = {};
+                          if (typeof variant.specsJson === "string") {
+                            try { specsObj = JSON.parse(variant.specsJson); } catch {}
+                          } else {
+                            specsObj = variant.specsJson as Record<string, unknown>;
+                          }
+                          val = specsObj[key] ? String(specsObj[key]) : "-";
+                        }
+                        return (
+                          <div key={`${product.id}-${key}`} className="p-4 border-b border-slate-100 text-sm text-slate-700">
+                            {val}
+                          </div>
+                        );
+                      })}
                     </Fragment>
                   ))}
                 </div>
