@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Edit, Plus, Ticket, Trash2, X } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, Edit, Eye, Plus, Ticket, Trash2, X } from "lucide-react";
 import { voucherApi } from "@/lib/api-endpoints";
 import type { ApiError } from "@/lib/api";
 import type { DiscountType, Voucher, VoucherStatus } from "@/types/api";
@@ -224,6 +225,13 @@ export default function ManagerVouchersPage() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
+                        <Link
+                          href={`/manager/vouchers/${voucher.id}`}
+                          className="rounded-lg border border-slate-200 p-2 text-emerald-600"
+                          title="Xem chi tiết"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Link>
                         <button
                           type="button"
                           onClick={() => openEditModal(voucher)}

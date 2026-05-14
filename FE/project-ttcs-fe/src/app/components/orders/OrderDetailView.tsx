@@ -53,8 +53,12 @@ export function OrderDetailView({ order, backHref }: OrderDetailViewProps) {
           <div className="divide-y divide-slate-100">
             {order.items?.map((item) => (
               <div key={item.id} className="flex items-center gap-5 p-6">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-slate-50">
-                  <Package className="h-7 w-7 text-slate-300" />
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-slate-50 overflow-hidden">
+                  {item.imageUrl ? (
+                    <img src={item.imageUrl} alt={item.productName || ""} className="h-full w-full object-contain" />
+                  ) : (
+                    <Package className="h-7 w-7 text-slate-300" />
+                  )}
                 </div>
 
                 <div className="min-w-0 flex-1">

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   AlertCircle,
   ChevronLeft,
@@ -11,6 +12,7 @@ import {
   Save,
   X,
   Edit2,
+  Eye,
 } from "lucide-react";
 import { productApi, managerDashboardApi } from "@/lib/api-endpoints";
 import { getPrimaryImage, formatCurrency } from "@/lib/format";
@@ -299,6 +301,14 @@ export default function ManagerProductsPage() {
                         )}
                       </td>
                       <td className="px-8 py-6 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/manager/products/${p.id}`}
+                            className="p-3 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition shadow-sm bg-white"
+                            title="Xem chi tiết"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Link>
                         {!isEditing && variantId && (
                           <button
                             type="button"
@@ -309,6 +319,7 @@ export default function ManagerProductsPage() {
                             <Edit2 className="w-4 h-4" />
                           </button>
                         )}
+                        </div>
                       </td>
                     </tr>
                   );

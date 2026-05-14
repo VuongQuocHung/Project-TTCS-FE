@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { brandApi } from "@/lib/api-endpoints";
 import { Brand } from "@/types/api";
 import { 
@@ -119,6 +120,12 @@ export default function AdminBrandsPage() {
             <h3 className="text-lg font-black text-slate-900 mb-6 tracking-tighter text-center uppercase">{b.name}</h3>
             
             <div className="flex items-center gap-2 w-full pt-4 border-t border-slate-50">
+              <Link
+                href={`/admin/brands/${b.id}`}
+                className="flex-1 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl text-xs font-black tracking-widest uppercase transition text-center"
+              >
+                Chi tiết
+              </Link>
               <button 
                 onClick={() => { setEditingBrand(b); setIsModalOpen(true); }}
                 className="flex-1 py-2 bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl text-xs font-black tracking-widest uppercase transition"

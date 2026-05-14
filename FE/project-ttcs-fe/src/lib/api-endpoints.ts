@@ -93,6 +93,8 @@ export const productApi = {
     apiClient.GET<Product[]>(`/api/v1/public/products/best-selling?limit=${limit}`),
   getById: (id: number) =>
     apiClient.GET<Product>(`/api/v1/public/products/${id}`),
+  getAdminById: (id: number) =>
+    apiClient.GET<Product>(`/api/v1/admin/products/${id}`, { auth: true }),
   getSuggestions: (q: string) =>
     apiClient.GET<string[]>(
       `/api/v1/public/products/suggestions?q=${encodeURIComponent(q)}`
@@ -122,6 +124,10 @@ export const productApi = {
 export const categoryApi = {
   getAllPublic: () =>
     apiClient.GET<Category[]>("/api/v1/public/catalog/categories"),
+  getAdminById: (id: number) =>
+    apiClient.GET<Category>(`/api/v1/admin/catalog/categories/${id}`, { auth: true }),
+  getManagerById: (id: number) =>
+    apiClient.GET<Category>(`/api/v1/manager/catalog/categories/${id}`, { auth: true }),
   getAll: (params?: CategoryQueryParams) =>
     apiClient.GET<PageCategory>(`/api/v1/admin/catalog/categories${toQueryString(params)}`, {
       auth: true,
@@ -140,6 +146,10 @@ export const categoryApi = {
 
 export const brandApi = {
   getAllPublic: () => apiClient.GET<Brand[]>("/api/v1/public/catalog/brands"),
+  getAdminById: (id: number) =>
+    apiClient.GET<Brand>(`/api/v1/admin/catalog/brands/${id}`, { auth: true }),
+  getManagerById: (id: number) =>
+    apiClient.GET<Brand>(`/api/v1/manager/catalog/brands/${id}`, { auth: true }),
   getAll: (params?: BrandQueryParams) =>
     apiClient.GET<PageBrand>(`/api/v1/admin/catalog/brands${toQueryString(params)}`, {
       auth: true,
@@ -166,6 +176,8 @@ export const branchApi = {
     ),
   getAllAdmin: () =>
     apiClient.GET<Branch[]>("/api/v1/admin/branches", { auth: true }),
+  getAdminById: (id: number) =>
+    apiClient.GET<Branch>(`/api/v1/admin/branches/${id}`, { auth: true }),
   create: (data: Branch) =>
     apiClient.POST<Branch>("/api/v1/admin/branches", data, { auth: true }),
   update: (id: number, data: Branch) =>
@@ -254,6 +266,10 @@ export const voucherApi = {
     apiClient.GET<PageVoucher>(`/api/v1/manager/vouchers${toQueryString(params)}`, {
       auth: true,
     }),
+  getAdminById: (id: number) =>
+    apiClient.GET<Voucher>(`/api/v1/admin/vouchers/${id}`, { auth: true }),
+  getManagerById: (id: number) =>
+    apiClient.GET<Voucher>(`/api/v1/manager/vouchers/${id}`, { auth: true }),
   create: (data: Voucher) =>
     apiClient.POST<Voucher>("/api/v1/admin/vouchers", data, { auth: true }),
   createManager: (data: Voucher) =>
@@ -282,6 +298,8 @@ export const userApi = {
     apiClient.GET<PageUser>(`/api/v1/admin/users${toQueryString(params)}`, { auth: true }),
   getById: (id: number) =>
     apiClient.GET<User>(`/api/v1/admin/users/${id}`, { auth: true }),
+  getManagerById: (id: number) =>
+    apiClient.GET<User>(`/api/v1/manager/users/${id}`, { auth: true }),
   create: (data: AdminUserRequest) =>
     apiClient.POST<User>("/api/v1/admin/users", data, { auth: true }),
   update: (id: number, data: AdminUserRequest) =>

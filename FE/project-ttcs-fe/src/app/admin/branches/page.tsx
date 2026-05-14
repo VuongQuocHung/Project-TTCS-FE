@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import {
   AlertCircle,
   Building2,
   Edit3,
-  MapPin,
-  Phone,
+  Eye,
   Plus,
   RefreshCw,
   ShoppingBag,
@@ -252,12 +252,6 @@ export default function AdminBranchesPage() {
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   Chi nhánh
                 </th>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  Địa chỉ
-                </th>
-                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                  SĐT
-                </th>
                 <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
                   Đơn hàng
                 </th>
@@ -274,8 +268,6 @@ export default function AdminBranchesPage() {
                 Array.from({ length: 3 }).map((_, index) => (
                   <tr key={index} className="animate-pulse">
                     <td className="px-8 py-6"><div className="h-10 bg-slate-100 rounded-xl w-40" /></td>
-                    <td className="px-6 py-6"><div className="h-10 bg-slate-100 rounded-xl w-48" /></td>
-                    <td className="px-6 py-6"><div className="h-10 bg-slate-100 rounded-xl w-28" /></td>
                     <td className="px-6 py-6"><div className="h-10 bg-slate-100 rounded-xl w-20 mx-auto" /></td>
                     <td className="px-6 py-6"><div className="h-10 bg-slate-100 rounded-xl w-32 ml-auto" /></td>
                     <td className="px-8 py-6"><div className="h-10 bg-slate-100 rounded-xl w-24 mx-auto" /></td>
@@ -283,7 +275,7 @@ export default function AdminBranchesPage() {
                 ))
               ) : branches.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-8 py-20 text-center">
+                  <td colSpan={4} className="px-8 py-20 text-center">
                     <Building2 className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                     <p className="text-slate-400 font-bold">Chưa có chi nhánh nào</p>
                   </td>
@@ -302,18 +294,6 @@ export default function AdminBranchesPage() {
                             <p className="font-black text-slate-900">{branch.name}</p>
                             <p className="text-xs text-slate-400">ID: {branch.id}</p>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-6">
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate max-w-[200px]">{branch.address || "---"}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-6">
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          {branch.phone || "---"}
                         </div>
                       </td>
                       <td className="px-6 py-6 text-center">
@@ -336,6 +316,13 @@ export default function AdminBranchesPage() {
                       </td>
                       <td className="px-8 py-6">
                         <div className="flex items-center justify-center gap-2">
+                          <Link
+                            href={`/admin/branches/${branch.id}`}
+                            className="p-2.5 rounded-xl border border-slate-200 text-slate-400 hover:text-emerald-600 hover:border-emerald-300 transition"
+                            title="Xem chi tiết"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Link>
                           <button
                             type="button"
                             onClick={() => openEditModal(branch)}
@@ -393,6 +380,7 @@ export default function AdminBranchesPage() {
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition"
                 />
               </div>
+
               <div>
                 <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">
                   Địa chỉ
@@ -417,6 +405,7 @@ export default function AdminBranchesPage() {
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition"
                 />
               </div>
+              
             </div>
 
             <div className="px-8 py-6 border-t border-slate-100 flex items-center justify-end gap-3">

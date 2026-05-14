@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { productApi, categoryApi, brandApi, branchApi, fileApi } from "@/lib/api-endpoints";
 import { Product, Category, Brand, Branch, Inventory } from "@/types/api";
 import { getPrimaryImage } from "@/lib/format";
@@ -18,7 +19,8 @@ import {
   Check,
   AlertCircle,
   UploadCloud,
-  Loader2
+  Loader2,
+  Eye,
 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 
@@ -516,6 +518,13 @@ export default function AdminProductsPage() {
                     </td>
                     <td className="px-8 py-6 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Link
+                          href={`/admin/products/${p.id}`}
+                          className="p-3 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition shadow-sm bg-white"
+                          title="Xem chi tiết"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Link>
                         <button 
                           onClick={() => openEditModal(p)}
                           className="p-3 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition shadow-sm bg-white"

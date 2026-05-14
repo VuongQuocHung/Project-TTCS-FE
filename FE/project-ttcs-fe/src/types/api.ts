@@ -120,6 +120,7 @@ export interface OrderItem {
   variantId?: number;
   productName?: string;
   sku?: string;
+  imageUrl?: string;
   quantity?: number;
   price?: number;
 }

@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   Building2,
   Check,
   ChevronLeft,
   ChevronRight,
   Edit2,
+  Eye,
   Mail,
   Phone,
   Plus,
@@ -286,6 +288,9 @@ export default function AdminUsersPage() {
                 <th className="px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
                   Trạng thái
                 </th>
+                <th className="px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                  Ngày tạo / Cập nhật
+                </th>
                 <th className="px-4 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">
                   Thao tác
                 </th>
@@ -317,7 +322,7 @@ export default function AdminUsersPage() {
                 ))
               ) : paginatedUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-8 py-20 text-center">
+                  <td colSpan={7} className="px-8 py-20 text-center">
                     <Users className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                     <p className="text-slate-400 font-bold">
                       Không tìm thấy người dùng nào
@@ -443,8 +448,27 @@ export default function AdminUsersPage() {
                           : "Vô hiệu hóa"}
                       </button>
                     </td>
+                    <td className="px-4 py-6 whitespace-nowrap">
+                      <p className="text-xs font-medium text-slate-600">
+                        {user.createdAt
+                          ? new Date(user.createdAt).toLocaleDateString("vi-VN")
+                          : "---"}
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        {user.updatedAt
+                          ? new Date(user.updatedAt).toLocaleDateString("vi-VN")
+                          : "---"}
+                      </p>
+                    </td>
                     <td className="px-4 py-6 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Link
+                          href={`/admin/users/${user.id}`}
+                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition shadow-sm bg-white"
+                          title="Xem chi tiết"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Link>
                         <button
                           type="button"
                           onClick={() => openEditModal(user)}

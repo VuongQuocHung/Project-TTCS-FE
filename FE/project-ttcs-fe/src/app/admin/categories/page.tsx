@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import { categoryApi } from "@/lib/api-endpoints";
 import { Category } from "@/types/api";
 import { 
@@ -119,6 +120,12 @@ export default function AdminCategoriesPage() {
             </p>
 
             <div className="mt-6 pt-5 border-t border-slate-100 flex items-center gap-3">
+              <Link
+                href={`/admin/categories/${c.id}`}
+                className="px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl text-xs font-black tracking-widest uppercase transition"
+              >
+                Chi tiết
+              </Link>
               <button
                 onClick={() => { setEditingCategory(c); setIsModalOpen(true); }}
                 className="px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-xs font-black tracking-widest uppercase transition"
