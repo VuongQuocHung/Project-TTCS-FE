@@ -234,6 +234,14 @@ export default function ProductDetailPage() {
     let processed = html.replace(/data-src=/gi, "src=");
     processed = processed.replace(/((?:src|href)\s*=\s*(["']))\s*\/?(media)\//gi, `$1https://laptop88.vn/$3/`);
     processed = processed.replace(/((?:src|href)\s*=\s*(["']))\s*\/?(uploads)\//gi, `$1${getApiBaseUrl()}/$3/`);
+    
+    // Xử lý chuỗi JSON thô nếu có (loại bỏ ngoặc kép bọc ngoài và unescape \n)
+    if (processed.startsWith('"') && processed.endsWith('"')) {
+      processed = processed.slice(1, -1);
+    }
+    processed = processed.replace(/\\n/g, "\n");
+    processed = processed.replace(/\\"/g, '"');
+    
     return processed;
   };
   const branchStocks = Object.values(
@@ -308,7 +316,7 @@ export default function ProductDetailPage() {
               </h3>
               <div className="relative">
                 <div 
-                  className={`text-slate-600 leading-relaxed text-sm html-content transition-all duration-500 overflow-hidden ${showFullDescription ? 'max-h-[50000px]' : 'max-h-[400px]'}`}
+                  className={`text-slate-600 leading-relaxed text-sm html-content whitespace-pre-wrap transition-all duration-500 overflow-hidden ${showFullDescription ? 'max-h-[50000px]' : 'max-h-[400px]'}`}
                   dangerouslySetInnerHTML={{ __html: processHtml(product.description) }}
                 />
                 {!showFullDescription && (
