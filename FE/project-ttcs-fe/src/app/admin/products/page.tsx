@@ -71,6 +71,12 @@ const rowsToSpecsJson = (rows: SpecRow[]): Record<string, string> => {
   }, {});
 };
 
+const normalizeImageUrls = (urls: Array<string | undefined | null>): string[] => {
+  return urls
+    .map((url) => normalizeAssetUrl(safeInputValue(url).trim()))
+    .filter(Boolean);
+};
+
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -87,7 +93,8 @@ export default function AdminProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string>("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [imageUrlInput, setImageUrlInput] = useState<string>("");
   const [stockMode, setStockMode] = useState<StockMode>("all");
   const [allBranchStock, setAllBranchStock] = useState("0");
   const [branchStocks, setBranchStocks] = useState<Record<number, string>>({});
@@ -149,7 +156,8 @@ export default function AdminProductsPage() {
 
   const openAddModal = () => {
     setEditingProduct(null);
-    setImageUrl("");
+    setImageUrls([]);
+    setImageUrlInput("");
     setStockMode("all");
     setAllBranchStock("0");
     setBranchStocks({});
@@ -172,7 +180,8 @@ export default function AdminProductsPage() {
       quantities.every((quantity) => quantity === quantities[0]);
 
     setEditingProduct(product);
-    setImageUrl(product.variants?.[0]?.images?.[0]?.imageUrl || "");
+    setImageUrls(normalizeImageUrls((product.variants?.[0]?.images || []).map((image) => image.imageUrl)));
+    setImageUrlInput("");
     setStockMode(allBranchesHaveSameStock ? "all" : "custom");
     setAllBranchStock(safeInputValue(getAllBranchStockDefault(product)));
     setBranchStocks(nextBranchStocks);
@@ -189,13 +198,72 @@ export default function AdminProductsPage() {
     setIsUploading(true);
     try {
       const res = await fileApi.upload(file);
-      setImageUrl(normalizeAssetUrl(res.url));
+      const nextUrl = normalizeAssetUrl(res.url);
+      setImageUrls((current) => (nextUrl && !current.includes(nextUrl) ? [...current, nextUrl] : current));
     } catch (err) {
       console.error("Upload failed:", err);
       alert("Tải ảnh thất bại. Vui lòng thử lại!");
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleFilesUpload = async (files: FileList | File[]) => {
+    const allFiles = Array.from(files);
+    const imageFiles = allFiles.filter((file) => file.type.startsWith("image/"));
+
+    if (imageFiles.length === 0) {
+      alert("Vui lòng chỉ tải lên tệp tin hình ảnh!");
+      return;
+    }
+
+    if (imageFiles.length !== allFiles.length) {
+      alert("Một số tệp không phải hình ảnh đã được bỏ qua.");
+    }
+
+    setIsUploading(true);
+    try {
+      const uploaded = await fileApi.uploadMany(imageFiles);
+      setImageUrls((current) => {
+        const existing = new Set(current);
+        const nextUrls = normalizeImageUrls(uploaded.map((res) => res.url)).filter((url) => !existing.has(url));
+        return [...current, ...nextUrls];
+      });
+    } catch (err) {
+      console.error("Upload failed:", err);
+      alert("Tải ảnh thất bại. Vui lòng thử lại!");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleAddImageUrl = () => {
+    const urls = normalizeImageUrls(
+      imageUrlInput
+        .split(/[\n,]+/)
+        .map((url) => url.trim())
+        .filter(Boolean)
+    );
+
+    if (urls.length === 0) return;
+
+    setImageUrls((current) => {
+      const existing = new Set(current);
+      return [...current, ...urls.filter((url) => !existing.has(url))];
+    });
+    setImageUrlInput("");
+  };
+
+  const removeImageUrl = (index: number) => {
+    setImageUrls((current) => current.filter((_, currentIndex) => currentIndex !== index));
+  };
+
+  const setPrimaryImage = (index: number) => {
+    setImageUrls((current) => {
+      const selected = current[index];
+      if (!selected) return current;
+      return [selected, ...current.filter((_, currentIndex) => currentIndex !== index)];
+    });
   };
 
   const handlePaste = async (e: React.ClipboardEvent) => {
@@ -214,9 +282,9 @@ export default function AdminProductsPage() {
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) {
-        handleFileUpload(file);
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        handleFilesUpload(files);
     }
   };
 
@@ -293,6 +361,9 @@ export default function AdminProductsPage() {
     }
 
     const specsJson = rowsToSpecsJson(specRows);
+    const submittedImageUrls = normalizeImageUrls([...imageUrls, imageUrlInput]).filter(
+      (url, index, urls) => urls.indexOf(url) === index
+    );
     const variant = {
       ...(currentVariant || {}),
       sku: sku || currentVariant?.sku || `SP-${Date.now()}`,
@@ -301,7 +372,7 @@ export default function AdminProductsPage() {
       quantity: inventories.reduce((sum, inventory) => sum + (inventory.quantity || 0), 0),
       inventories,
       specsJson,
-      images: imageUrl ? [{ imageUrl: normalizeAssetUrl(imageUrl) }] : currentVariant?.images ?? [],
+      images: submittedImageUrls.map((url) => ({ imageUrl: normalizeAssetUrl(url) })),
     };
     const productData: Product = {
       ...editingProduct,
@@ -630,12 +701,12 @@ export default function AdminProductsPage() {
                       onDrop={handleDrop}
                       className={`relative group border-2 border-dashed rounded-3xl transition-all duration-300 overflow-hidden ${
                         isUploading ? 'border-blue-400 bg-blue-50/30' : 
-                        imageUrl ? 'border-slate-200 bg-slate-50' : 'border-slate-200 hover:border-blue-400 hover:bg-blue-50/30'
+                        imageUrls.length > 0 ? 'border-slate-200 bg-slate-50' : 'border-slate-200 hover:border-blue-400 hover:bg-blue-50/30'
                       }`}
                     >
-                      {imageUrl ? (
+                      {imageUrls.length > 0 ? (
                         <div className="relative aspect-video flex items-center justify-center p-4">
-                          <img src={resolveApiAssetUrl(imageUrl)} alt="Preview" className="max-h-full max-w-full object-contain rounded-xl shadow-lg" />
+                          <img src={resolveApiAssetUrl(imageUrls[0])} alt="Preview" className="max-h-full max-w-full object-contain rounded-xl shadow-lg" />
                           <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                             <button 
                               type="button"
@@ -643,9 +714,10 @@ export default function AdminProductsPage() {
                                 const input = document.createElement('input');
                                 input.type = 'file';
                                 input.accept = 'image/*';
+                                input.multiple = true;
                                 input.onchange = (e) => {
-                                  const file = (e.target as HTMLInputElement).files?.[0];
-                                  if (file) handleFileUpload(file);
+                                  const files = (e.target as HTMLInputElement).files;
+                                  if (files?.length) handleFilesUpload(files);
                                 };
                                 input.click();
                               }}
@@ -655,7 +727,7 @@ export default function AdminProductsPage() {
                             </button>
                             <button 
                               type="button"
-                              onClick={() => setImageUrl("")}
+                              onClick={() => setImageUrls([])}
                               className="p-3 bg-white rounded-2xl text-red-500 hover:scale-110 transition shadow-xl"
                             >
                               <Trash2 className="w-5 h-5" />
@@ -669,9 +741,10 @@ export default function AdminProductsPage() {
                             const input = document.createElement('input');
                             input.type = 'file';
                             input.accept = 'image/*';
+                            input.multiple = true;
                             input.onchange = (e) => {
-                              const file = (e.target as HTMLInputElement).files?.[0];
-                              if (file) handleFileUpload(file);
+                              const files = (e.target as HTMLInputElement).files;
+                              if (files?.length) handleFilesUpload(files);
                             };
                             input.click();
                           }}
@@ -690,13 +763,53 @@ export default function AdminProductsPage() {
 
                     <input 
                       name="imageUrl" 
-                      value={safeInputValue(imageUrl)}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      onBlur={(e) => setImageUrl(normalizeAssetUrl(e.target.value))}
+                      value={safeInputValue(imageUrlInput)}
+                      onChange={(e) => setImageUrlInput(e.target.value)}
+                      onBlur={(e) => setImageUrlInput(normalizeAssetUrl(e.target.value))}
                       onPaste={handlePaste}
                       placeholder="Hoặc dán URL hình ảnh tại đây..." 
                       className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-medium outline-none focus:border-blue-600 transition text-sm" 
                     />
+                    <button
+                      type="button"
+                      onClick={handleAddImageUrl}
+                      className="w-full px-6 py-3 bg-slate-900 text-white rounded-2xl font-black hover:bg-blue-600 transition"
+                    >
+                      Thêm URL ảnh vào danh sách
+                    </button>
+
+                    {imageUrls.length > 0 && (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {imageUrls.map((url, index) => (
+                          <div key={`${url}-${index}`} className="relative group aspect-square rounded-2xl border border-slate-200 bg-slate-50 p-2 overflow-hidden">
+                            <img src={resolveApiAssetUrl(url)} alt={`Preview ${index + 1}`} className="w-full h-full object-contain rounded-xl" />
+                            <div className="absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[10px] font-black text-slate-700 shadow-sm">
+                              {index === 0 ? "Ảnh đại diện" : `#${index + 1}`}
+                            </div>
+                            <div className="absolute inset-0 bg-slate-900/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              {index > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPrimaryImage(index)}
+                                  className="px-3 py-2 bg-white rounded-xl text-xs font-black text-blue-600 hover:scale-105 transition shadow-xl"
+                                >
+                                  Đặt đại diện
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => removeImageUrl(index)}
+                                className="p-2 bg-white rounded-xl text-red-500 hover:scale-105 transition shadow-xl"
+                                aria-label="Xóa ảnh"
+                                title="Xóa ảnh"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 

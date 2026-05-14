@@ -336,8 +336,19 @@ export const cartApi = {
 export const fileApi = {
   upload: (file: File) => {
     const formData = new FormData();
-    formData.append("file", file);
-    return apiClient.POST<{ url: string; fileName: string }>(
+    formData.append("files", file);
+    return apiClient
+      .POST<Array<{ url: string; fileName: string }>>(
+        "/api/v1/admin/products/upload-image",
+        formData,
+        { auth: true }
+      )
+      .then((results) => results[0]);
+  },
+  uploadMany: (files: File[] | FileList) => {
+    const formData = new FormData();
+    Array.from(files).forEach((file) => formData.append("files", file));
+    return apiClient.POST<Array<{ url: string; fileName: string }>>(
       "/api/v1/admin/products/upload-image",
       formData,
       { auth: true }
