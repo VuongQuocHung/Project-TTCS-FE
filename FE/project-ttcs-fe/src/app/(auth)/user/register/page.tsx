@@ -225,6 +225,13 @@ export default function UserRegisterPage() {
                   >
                     {isLoading ? "Đang đăng ký..." : "Đăng ký"}
                   </button>
+
+                  <p className="text-center text-[13px] text-[#666]">
+                    Đã có tài khoản?{" "}
+                    <Link href="/user/login" className="font-[700] text-[#0088FF] hover:underline">
+                      Đăng nhập
+                    </Link>
+                  </p>
                 </form>
               </>
             )}

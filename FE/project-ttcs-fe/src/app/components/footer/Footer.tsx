@@ -42,9 +42,10 @@ export const Footer = () => {
           <div>
             <h4 className="text-white font-bold mb-6">Sản phẩm</h4>
             <ul className="space-y-4 text-sm">
-              <li><a href="/product/list?categoryId=1" className="hover:text-white transition">Laptop Gaming</a></li>
-              <li><a href="/product/list?categoryId=2" className="hover:text-white transition">Laptop Văn phòng</a></li>
-              <li><a href="#" className="hover:text-white transition">Linh kiện & Phụ kiện</a></li>
+              <li><a href="/product/list?categoryId=1" className="hover:text-white transition">Laptop Học tập, Văn phòng</a></li>
+              <li><a href="/product/list?categoryId=2" className="hover:text-white transition">Laptop Gaming</a></li>
+              <li><a href="/product/list?categoryId=3" className="hover:text-white transition">Laptop cho đồ họa, kĩ thuật</a></li>
+              <li><a href="/product/list?categoryId=4" className="hover:text-white transition">Laptop mỏng nhẹ, cao cấp</a></li>
             </ul>
           </div>
 
