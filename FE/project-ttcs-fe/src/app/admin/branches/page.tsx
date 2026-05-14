@@ -7,6 +7,8 @@ import {
   Building2,
   Edit3,
   Eye,
+  MapPin,
+  Phone,
   Plus,
   RefreshCw,
   ShoppingBag,
@@ -252,6 +254,12 @@ export default function AdminBranchesPage() {
                 <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   Chi nhánh
                 </th>
+                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Địa chỉ
+                </th>
+                <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Điện thoại
+                </th>
                 <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">
                   Đơn hàng
                 </th>
@@ -268,6 +276,8 @@ export default function AdminBranchesPage() {
                 Array.from({ length: 3 }).map((_, index) => (
                   <tr key={index} className="animate-pulse">
                     <td className="px-8 py-6"><div className="h-10 bg-slate-100 rounded-xl w-40" /></td>
+                    <td className="px-6 py-6"><div className="h-10 bg-slate-100 rounded-xl w-40" /></td>
+                    <td className="px-6 py-6"><div className="h-10 bg-slate-100 rounded-xl w-28" /></td>
                     <td className="px-6 py-6"><div className="h-10 bg-slate-100 rounded-xl w-20 mx-auto" /></td>
                     <td className="px-6 py-6"><div className="h-10 bg-slate-100 rounded-xl w-32 ml-auto" /></td>
                     <td className="px-8 py-6"><div className="h-10 bg-slate-100 rounded-xl w-24 mx-auto" /></td>
@@ -275,7 +285,7 @@ export default function AdminBranchesPage() {
                 ))
               ) : branches.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-8 py-20 text-center">
+                  <td colSpan={6} className="px-8 py-20 text-center">
                     <Building2 className="w-12 h-12 text-slate-200 mx-auto mb-4" />
                     <p className="text-slate-400 font-bold">Chưa có chi nhánh nào</p>
                   </td>
@@ -295,6 +305,26 @@ export default function AdminBranchesPage() {
                             <p className="text-xs text-slate-400">ID: {branch.id}</p>
                           </div>
                         </div>
+                      </td>
+                      <td className="px-6 py-6">
+                        {branch.address ? (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                            <span className="text-sm text-slate-600 truncate max-w-[200px]">{branch.address}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-6">
+                        {branch.phone ? (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                            <span className="text-sm text-slate-600">{branch.phone}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-300">—</span>
+                        )}
                       </td>
                       <td className="px-6 py-6 text-center">
                         <p className="text-lg font-black text-slate-900">
