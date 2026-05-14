@@ -123,7 +123,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-slate-50 pb-20 font-sans">
       <div className="mx-auto max-w-[1200px] px-6 pt-10">
-        <section className="relative mb-12 overflow-hidden rounded-3xl bg-slate-900 p-12 text-white shadow-2xl shadow-blue-200/50">
+        <section className="relative mb-12 flex flex-col items-center justify-between gap-8 overflow-hidden rounded-3xl bg-slate-900 p-12 text-white shadow-2xl shadow-blue-200/50 md:flex-row">
           <div className="relative z-10 max-w-lg">
             <span className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-600/30 px-3 py-1.5 text-xs font-bold text-blue-300">
               <Star className="h-3.5 w-3.5 fill-blue-300" />
@@ -146,6 +146,30 @@ export default function HomePage() {
               Mua ngay
               <ArrowRight className="h-4 w-4" />
             </Link>
+          </div>
+
+          <div className="relative z-10 flex w-full max-w-md flex-col gap-4">
+            <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 p-6 shadow-lg transition-transform hover:-translate-y-1">
+              <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/20 blur-3xl transition-all group-hover:bg-white/30"></div>
+              <h3 className="mb-2 text-2xl font-black tracking-tight text-white drop-shadow-sm">Chào Tân Sinh Viên</h3>
+              <p className="mb-4 text-sm font-medium text-blue-100">
+                Giảm ngay đến 30% khi mua laptop. Tặng kèm balo và chuột không dây cao cấp!
+              </p>
+              <Link href="/product/list" className="inline-flex items-center text-sm font-bold text-white transition hover:text-blue-200">
+                Khám phá ngay <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
+
+            <div className="group relative overflow-hidden rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 p-6 shadow-lg transition-transform hover:-translate-y-1">
+              <div className="absolute -right-6 -bottom-6 h-32 w-32 rounded-full bg-yellow-400/20 blur-3xl transition-all group-hover:bg-yellow-400/30"></div>
+              <h3 className="mb-2 text-2xl font-black tracking-tight text-white drop-shadow-sm">Black Friday</h3>
+              <p className="mb-4 text-sm font-medium text-rose-100">
+                Cơ hội lớn nhất năm. Săn sale sập sàn, mua 1 tặng 1 cùng hàng ngàn voucher hấp dẫn.
+              </p>
+              <Link href="/product/list" className="inline-flex items-center text-sm font-bold text-white transition hover:text-rose-200">
+                Săn sale ngay <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </section>
 
