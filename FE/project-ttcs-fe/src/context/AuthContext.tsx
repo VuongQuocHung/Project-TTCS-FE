@@ -17,7 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function normalizeSessionUser(authData: AuthResponse, profile?: User | null): SessionUser {
   const token = resolveTokenFromAuthPayload(authData) ?? authData.token ?? undefined;
-  const role = authData.role ?? profile?.role ?? authData.user?.role;
+  const role = profile?.role ?? authData.user?.role ?? authData.role;
 
   return {
     ...profile,

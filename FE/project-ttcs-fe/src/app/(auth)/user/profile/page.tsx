@@ -30,6 +30,14 @@ function ProfileContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoadedLatestProfile, setHasLoadedLatestProfile] = useState(false);
+
+  useEffect(() => {
+    if (!user?.token || hasLoadedLatestProfile) return;
+
+    setHasLoadedLatestProfile(true);
+    void refreshProfile();
+  }, [user?.token, hasLoadedLatestProfile, refreshProfile]);
 
   useEffect(() => {
     setFormData({
