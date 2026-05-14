@@ -13,6 +13,7 @@ import {
   CreditCard,
   Truck
 } from "lucide-react";
+import { resolveApiAssetUrl } from "@/lib/api";
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQuantity, totalPrice, totalItems } = useCart();
@@ -56,7 +57,7 @@ export default function CartPage() {
               >
                 <div className="w-24 h-24 bg-slate-50 rounded-2xl overflow-hidden shrink-0 border border-slate-100">
                   <img
-                    src="/assets/images/loq.jpg"
+                    src={resolveApiAssetUrl(item.imageUrl) || "/assets/images/loq.jpg"}
                     alt={item.productName}
                     className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                   />

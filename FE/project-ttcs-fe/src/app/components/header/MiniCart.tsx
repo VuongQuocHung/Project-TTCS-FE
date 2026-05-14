@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { ShoppingCart, X, Trash2, ChevronRight } from "lucide-react";
+import { resolveApiAssetUrl } from "@/lib/api";
 
 export const MiniCart = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const { cart, removeFromCart, totalPrice, totalItems } = useCart();
@@ -33,7 +34,7 @@ export const MiniCart = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
             <div key={item.id} className="flex gap-4 group">
               <div className="w-20 h-20 bg-slate-50 border rounded-lg overflow-hidden flex-shrink-0">
                 <img
-                  src="/assets/images/loq.jpg"
+                  src={resolveApiAssetUrl(item.imageUrl) || "/assets/images/loq.jpg"}
                   alt={item.productName}
                   className="w-full h-full object-contain"
                 />

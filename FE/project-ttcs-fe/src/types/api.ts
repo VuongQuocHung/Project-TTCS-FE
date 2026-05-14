@@ -299,6 +299,7 @@ export interface CartItem {
   variantId?: number;
   productName?: string;
   variantSku?: string;
+  imageUrl?: string;
   quantity?: number;
   price?: number;
   snapshotPrice?: number;

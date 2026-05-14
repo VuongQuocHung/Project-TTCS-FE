@@ -22,7 +22,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { branchApi, orderApi, paymentApi, voucherApi } from "@/lib/api-endpoints";
-import type { ApiError } from "@/lib/api";
+import { resolveApiAssetUrl, type ApiError } from "@/lib/api";
 import type { BranchFulfillment, PaymentMethod, Voucher } from "@/types/api";
 import { calculateVoucherDiscount, formatCurrency, formatVoucherValue } from "@/lib/format";
 
@@ -552,7 +552,15 @@ function CheckoutForm() {
                 {cart.map((item) => (
                   <div key={item.id} className="flex gap-4 items-center">
                     <div className="w-16 h-16 bg-slate-50 rounded-xl overflow-hidden shrink-0 border border-slate-100 flex items-center justify-center">
-                      <Package className="w-6 h-6 text-slate-300" />
+                      {item.imageUrl ? (
+                        <img
+                          src={resolveApiAssetUrl(item.imageUrl)}
+                          alt={item.productName}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <Package className="w-6 h-6 text-slate-300" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-slate-900 truncate">
