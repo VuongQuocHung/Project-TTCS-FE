@@ -32,7 +32,24 @@ import {
   writeCompareIds
 } from "@/lib/compare";
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 9;
+const SPEC_FILTERS = [
+  {
+    key: "cpu",
+    label: "CPU",
+    options: ["i3", "i5", "i7", "i9", "Ryzen 3", "Ryzen 5", "Ryzen 7", "Ryzen 9", "Ultra 5", "Ultra 7"],
+  },
+  {
+    key: "ram",
+    label: "RAM",
+    options: ["8GB", "16GB", "32GB", "64GB"],
+  },
+  {
+    key: "storage",
+    label: "ROM / O cung",
+    options: ["256GB", "512GB", "1TB", "2TB"],
+  },
+] as const;
 
 function ProductListContent() {
   const { addToCart } = useCart();
@@ -56,6 +73,9 @@ function ProductListContent() {
   const categoryId = searchParams.get("categoryId");
   const minPriceParam = searchParams.get("minPrice");
   const maxPriceParam = searchParams.get("maxPrice");
+  const cpu = searchParams.get("cpu") || "";
+  const ram = searchParams.get("ram") || "";
+  const storage = searchParams.get("storage") || "";
   const pageParam = Number(searchParams.get("page") || "1");
   const currentPage = Number.isFinite(pageParam) && pageParam > 0 ? pageParam - 1 : 0;
   const minPrice = minPriceParam && !Number.isNaN(Number(minPriceParam)) ? Number(minPriceParam) : undefined;
@@ -85,6 +105,9 @@ function ProductListContent() {
       categoryId: categoryId ? Number(categoryId) : undefined,
       minPrice,
       maxPrice,
+      cpu: cpu || undefined,
+      ram: ram || undefined,
+      storage: storage || undefined,
       page: isPriceSort ? 0 : currentPage,
       size: isPriceSort ? 1000 : PAGE_SIZE,
       sortBy: isPriceSort ? "createdAt" : sortBy,
@@ -127,7 +150,7 @@ function ProductListContent() {
     } finally {
       setIsLoading(false);
     }
-  }, [q, brandId, categoryId, minPrice, maxPrice, currentPage, sortBy, sortDir]);
+  }, [q, brandId, categoryId, minPrice, maxPrice, cpu, ram, storage, currentPage, sortBy, sortDir]);
 
   useEffect(() => {
     void fetchProducts(true);
@@ -252,12 +275,15 @@ function ProductListContent() {
     setCompareNotice(null);
   };
 
+  const productGridStyle = {
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  };
 
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-20">
+    <div className="min-h-screen overflow-x-hidden bg-slate-50 pb-20">
       <AutoRefresh intervalMs={30000} onRefresh={fetchProducts} enabled={!isLoading} />
-      <div className="max-w-[1200px] mx-auto px-6 py-10">
+      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
           <div>
@@ -272,7 +298,7 @@ function ProductListContent() {
             <p className="text-slate-500 mt-2 font-medium">Khám phá bộ sưu tập laptop đỉnh cao phù hợp với mọi nhu cầu.</p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <div className="bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-slate-600 flex items-center gap-2 shadow-sm">
               <LayoutGrid className="w-4 h-4 text-blue-600" />
               <span>{totalElements || products.length} Sản phẩm</span>
@@ -294,7 +320,7 @@ function ProductListContent() {
               <option value="price-desc">Giá giảm dần</option>
             </select>
 
-            {(q || brandId || categoryId || minPriceParam || maxPriceParam || sortBy !== "createdAt" || sortDir !== "desc") && (
+            {(q || brandId || categoryId || minPriceParam || maxPriceParam || cpu || ram || storage || sortBy !== "createdAt" || sortDir !== "desc") && (
               <button
                 onClick={() => router.push('/product/list')}
                 className="bg-red-50 text-red-600 border border-red-100 rounded-xl px-4 py-2 text-sm font-bold flex items-center gap-2 hover:bg-red-100 transition shadow-sm"
@@ -306,9 +332,9 @@ function ProductListContent() {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-10">
+        <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
           {/* SIDEBAR FILTERS */}
-          <aside className="w-full lg:w-[280px] space-y-8 shrink-0">
+          <aside className="w-full shrink-0 space-y-6 lg:w-64 xl:w-72">
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
               <div className="flex items-center gap-2 mb-6 text-slate-900">
                 <Filter className="w-5 h-5 text-blue-600" />
@@ -351,6 +377,33 @@ function ProductListContent() {
                     ))}
                   </div>
                 </div>
+
+                {SPEC_FILTERS.map((filter) => {
+                  const selectedValue = searchParams.get(filter.key) || "";
+
+                  return (
+                    <div key={filter.key}>
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+                        {filter.label}
+                      </p>
+                      <div className="space-y-3">
+                        {filter.options.map((option) => (
+                          <label key={option} className="flex items-center gap-3 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={selectedValue === option}
+                              onChange={(e) => updateFilter(filter.key, e.target.checked ? option : null)}
+                              className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-600 transition"
+                            />
+                            <span className={`text-sm font-medium transition-colors ${selectedValue === option ? "text-blue-600 font-bold" : "text-slate-600 group-hover:text-blue-600"}`}>
+                              {option}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
 
                 <div>
                   <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Khoảng giá</p>
@@ -399,20 +452,20 @@ function ProductListContent() {
           </aside>
 
           {/* PRODUCT LIST */}
-          <main className="flex-1">
+          <main className="min-w-0 flex-1">
             {error ? (
               <div className="bg-red-50 border border-red-100 p-8 rounded-3xl text-center">
                 <p className="text-red-600 font-bold">{error}</p>
                 <button onClick={() => router.push('/product/list')} className="mt-4 text-sm font-bold text-red-500 hover:underline underline-offset-4">Tải lại danh sách</button>
               </div>
             ) : isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
-                {Array(6).fill(0).map((_, i) => (
-                  <div key={i} className="bg-white rounded-3xl border border-slate-100 h-[420px] animate-pulse" />
+              <div className="grid gap-5" style={productGridStyle}>
+                {Array(9).fill(0).map((_, i) => (
+                  <div key={i} className="h-[340px] rounded-2xl border border-slate-100 bg-white animate-pulse" />
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-8">
+              <div className="grid gap-5" style={productGridStyle}>
                 {products.length === 0 ? (
                   <div className="col-span-full py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200">
                     <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -429,8 +482,8 @@ function ProductListContent() {
                   </div>
                 ) : (
                   products.map((p) => (
-                    <div key={p.id} className="group bg-white p-6 rounded-3xl border border-slate-200 hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-50 transition-all duration-300 flex flex-col">
-                      <div className="relative aspect-square mb-6 bg-slate-50 rounded-2xl overflow-hidden p-6 shrink-0">
+                    <div key={p.id} className="group flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-50">
+                      <div className="relative aspect-square mb-4 shrink-0 overflow-hidden rounded-xl bg-slate-50 p-4">
                         <Link href={`/product/${p.id}`}>
                           <img
                             src={getPrimaryImage(p)}
@@ -438,13 +491,13 @@ function ProductListContent() {
                             alt={p.name}
                           />
                         </Link>
-                        <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-md px-2 py-1 rounded-lg text-[10px] font-black text-slate-800 border border-white">
+                        <div className="absolute left-2 top-2 rounded-md border border-white bg-white/80 px-2 py-1 text-[9px] font-black text-slate-800 backdrop-blur-md">
                           <span>HOT</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleToggleCompare(p.id)}
-                          className={`absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wide border transition ${
+                          className={`absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wide transition ${
                             compareIds.includes(p.id || -1)
                               ? "bg-emerald-600 text-white border-emerald-600"
                               : "bg-white/80 text-slate-700 border-white hover:border-emerald-300"
@@ -459,11 +512,11 @@ function ProductListContent() {
                         </button>
                       </div>
 
-                      <h3 className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors mb-2 line-clamp-2 min-h-[40px]">
+                      <h3 className="mb-2 min-h-[38px] break-words text-[13px] font-bold leading-5 text-slate-900 transition-colors line-clamp-2 group-hover:text-blue-600">
                         <Link href={`/product/${p.id}`}>{p.name}</Link>
                       </h3>
 
-                      <div className="flex flex-wrap gap-1.5 mb-6">
+                      <div className="mb-4 flex flex-wrap gap-1.5">
                         {getSpecValue(p, "cpu") && (
                           <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 lowercase">
                             {getSpecValue(p, "cpu").split(" ").slice(0, 2).join(" ")}
@@ -481,7 +534,7 @@ function ProductListContent() {
                           <p className="text-xs text-slate-400 line-through font-medium mb-0.5">
                             {formatVnd((p.variants?.[0]?.price || 0) * 1.1)}
                           </p>
-                          <p className="text-xl font-black text-blue-600 tracking-tighter">
+                          <p className="text-lg font-black text-blue-600 tracking-tighter">
                             {formatVnd(p.variants?.[0]?.price)}
                           </p>
                         </div>
@@ -494,7 +547,7 @@ function ProductListContent() {
                               alert("Sản phẩm chưa có biến thể");
                             }
                           }}
-                          className="w-12 h-12 bg-slate-900 text-white rounded-2xl flex items-center justify-center hover:bg-blue-600 transition-all shadow-lg shadow-slate-200 overflow-hidden relative group/btn"
+                          className="group/btn relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-slate-900 text-white shadow-lg shadow-slate-200 transition-all hover:bg-blue-600"
                         >
                           <ShoppingBag className="w-5 h-5 relative z-10" />
                           <div className="absolute inset-0 bg-blue-600 translate-y-full group-hover/btn:translate-y-0 transition-transform" />

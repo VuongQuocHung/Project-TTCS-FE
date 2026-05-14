@@ -1,11 +1,29 @@
 "use client";
 
+import { type FormEvent, useState } from "react";
+
 type PaginationProps = {
   page: number; 
   totalPages: number;
   totalElements?: number;
   numberOfElements?: number;
   onPageChange: (nextPage: number) => void;
+};
+
+type PageItem = number | "...";
+
+const getPageItems = (page: number, totalPages: number): PageItem[] => {
+  if (totalPages <= 6) {
+    return Array.from({ length: totalPages }, (_, index) => index);
+  }
+
+  const lastPage = totalPages - 1;
+
+  if (page <= 4 || page === lastPage) {
+    return [0, 1, 2, 3, 4, "...", lastPage];
+  }
+
+  return [0, 1, 2, 3, 4, "...", page, "...", lastPage];
 };
 
 export function Pagination({
@@ -15,9 +33,22 @@ export function Pagination({
   numberOfElements,
   onPageChange,
 }: PaginationProps) {
+  const [jumpPage, setJumpPage] = useState("");
+
   if (totalPages <= 1) return null;
 
-  const pages = Array.from({ length: totalPages }, (_, i) => i);
+  const pageItems = getPageItems(page, totalPages);
+
+  const handleJumpPage = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const targetPage = Number(jumpPage);
+    if (!Number.isFinite(targetPage)) return;
+
+    const nextPage = Math.min(totalPages, Math.max(1, Math.trunc(targetPage))) - 1;
+    onPageChange(nextPage);
+    setJumpPage("");
+  };
 
   return (
     <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -38,18 +69,37 @@ export function Pagination({
           Trước
         </button>
 
-        {pages.map((p) => (
-          <button
-            key={p}
-            type="button"
-            onClick={() => onPageChange(p)}
-            className={`px-3 py-2 border rounded ${
-              p === page ? "bg-blue-600 text-white border-blue-600" : "bg-white"
-            }`}
-          >
-            {p + 1}
-          </button>
-        ))}
+        {pageItems.map((item, index) =>
+          item === "..." ? (
+            <span key={`ellipsis-${index}`} className="min-w-12 px-4 py-2 text-center font-bold text-slate-400">
+              ...
+            </span>
+          ) : (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onPageChange(item)}
+              className={`px-3 py-2 border rounded ${
+                item === page ? "bg-blue-600 text-white border-blue-600" : "bg-white"
+              }`}
+            >
+              {item + 1}
+            </button>
+          )
+        )}
+
+        <form onSubmit={handleJumpPage}>
+          <input
+            type="number"
+            min={1}
+            max={totalPages}
+            value={jumpPage}
+            onChange={(event) => setJumpPage(event.target.value)}
+            placeholder="Đến"
+            aria-label="Nhập số trang muốn đến"
+            className="w-18 rounded border px-3 py-2 text-center font-[400] outline-none focus:border-blue-600"
+          />
+        </form>
 
         <button
           type="button"
