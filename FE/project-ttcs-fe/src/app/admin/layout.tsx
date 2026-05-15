@@ -40,7 +40,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="p-8 border-b border-white/10">
             <Link href="/" className="flex items-center gap-2 group">
               <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
-              <span className="text-xl font-black tracking-tighter">VPH ADMIN</span>
+              <span className="text-xl font-black tracking-tighter">HĐP ADMIN</span>
             </Link>
           </div>
 

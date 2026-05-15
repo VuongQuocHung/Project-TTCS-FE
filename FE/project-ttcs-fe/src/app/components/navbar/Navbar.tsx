@@ -8,7 +8,7 @@ export const Navbar = () => {
         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white group-hover:bg-blue-700 transition">
           <Laptop size={18} />
         </div>
-        <span className="font-bold text-[16px] tracking-tight text-slate-800">VPH STORE</span>
+        <span className="font-bold text-[16px] tracking-tight text-slate-800">HĐP STORE</span>
       </Link>
 
       <Link href="/product/list" className="text-[14px] font-medium text-slate-600 hover:text-blue-600 transition">

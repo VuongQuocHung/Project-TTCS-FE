@@ -158,7 +158,7 @@ function OrdersList() {
                         Mã đơn hàng
                       </p>
                       <p className="text-lg font-black text-slate-900 tracking-tighter">
-                        #VPH-{order.id?.toString().padStart(6, "0")}
+                        #HĐP-{order.id?.toString().padStart(6, "0")}
                       </p>
                     </div>
                   </div>

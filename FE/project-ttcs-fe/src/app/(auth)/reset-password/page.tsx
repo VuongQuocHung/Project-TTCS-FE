@@ -203,7 +203,7 @@ export default function ResetPasswordPage() {
         </Suspense>
 
         <p className="mt-10 text-center text-slate-400 font-bold text-sm">
-          © 2026 VPH STORE - Secure Authentication
+          © 2026 HĐP STORE - Secure Authentication
         </p>
       </div>
     </div>

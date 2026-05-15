@@ -147,7 +147,7 @@ export default function VerifyEmailPage() {
 
         <div className="mt-10 flex items-center gap-3 text-slate-400 font-bold text-sm">
           <ShieldCheck className="w-4 h-4" />
-          <span>© 2026 VPH STORE - Secure Authentication</span>
+          <span>© 2026 HĐP STORE - Secure Authentication</span>
         </div>
       </div>
     </div>

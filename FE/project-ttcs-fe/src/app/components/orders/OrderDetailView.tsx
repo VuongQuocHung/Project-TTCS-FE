@@ -11,6 +11,7 @@ import {
   User,
 } from "lucide-react";
 import type { Order } from "@/types/api";
+import { resolveApiAssetUrl } from "@/lib/api";
 import { formatCurrency, getOrderStatusClasses, getOrderStatusLabel } from "@/lib/format";
 
 type OrderDetailViewProps = {
@@ -32,7 +33,7 @@ export function OrderDetailView({ order, backHref }: OrderDetailViewProps) {
             Chi tiết đơn hàng
           </h1>
           <p className="mt-1 font-medium text-slate-500">
-            Mã đơn hàng: <span className="font-black text-blue-600">#VPH-{order.id?.toString().padStart(6, "0")}</span>
+            Mã đơn hàng: <span className="font-black text-blue-600">#HĐP-{order.id?.toString().padStart(6, "0")}</span>
           </p>
         </div>
 
@@ -55,7 +56,7 @@ export function OrderDetailView({ order, backHref }: OrderDetailViewProps) {
               <div key={item.id} className="flex items-center gap-5 p-6">
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-slate-50 overflow-hidden">
                   {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.productName || ""} className="h-full w-full object-contain" />
+                    <img src={resolveApiAssetUrl(item.imageUrl)} alt={item.productName || ""} className="h-full w-full object-contain" />
                   ) : (
                     <Package className="h-7 w-7 text-slate-300" />
                   )}

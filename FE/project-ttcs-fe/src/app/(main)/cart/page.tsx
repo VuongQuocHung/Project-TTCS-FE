@@ -25,7 +25,7 @@ export default function CartPage() {
           <ShoppingBag className="w-12 h-12 text-slate-300" />
         </div>
         <h1 className="text-3xl font-black text-slate-900 mb-2 tracking-tighter">Giỏ hàng đang trống</h1>
-        <p className="text-slate-500 mb-8 max-w-sm">Hãy khám phá thêm hàng ngàn sản phẩm tuyệt vời khác từ VPH STORE nhé!</p>
+        <p className="text-slate-500 mb-8 max-w-sm">Hãy khám phá thêm hàng ngàn sản phẩm tuyệt vời khác từ HĐP STORE nhé!</p>
         <Link
           href="/product/list"
           className="bg-blue-600 text-white px-10 py-4 rounded-2xl font-black shadow-xl shadow-blue-100 hover:bg-blue-700 transition flex items-center gap-2"

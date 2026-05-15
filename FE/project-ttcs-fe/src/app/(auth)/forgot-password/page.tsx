@@ -143,7 +143,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <p className="mt-10 text-center text-slate-400 font-bold text-sm">
-          © 2026 VPH STORE - Build with passion
+          © 2026 HĐP STORE - Build with passion
         </p>
       </div>
     </div>

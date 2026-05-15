@@ -17,7 +17,7 @@ import {
 import { orderApi } from "@/lib/api-endpoints";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import type { Order } from "@/types/api";
-import type { ApiError } from "@/lib/api";
+import { resolveApiAssetUrl, type ApiError } from "@/lib/api";
 import { formatCurrency, getOrderStatusClasses, getOrderStatusLabel } from "@/lib/format";
 
 function OrderDetail() {
@@ -115,7 +115,7 @@ function OrderDetail() {
             <p className="text-slate-500 font-medium mt-1">
               Mã đơn hàng:{" "}
               <span className="text-blue-600">
-                #VPH-{order.id?.toString().padStart(6, "0")}
+                #HĐP-{order.id?.toString().padStart(6, "0")}
               </span>
             </p>
           </div>
@@ -156,7 +156,15 @@ function OrderDetail() {
                 {order.items?.map((item) => (
                   <div key={item.id} className="p-8 flex gap-6 items-center">
                     <div className="w-20 h-20 bg-slate-50 rounded-2xl border border-slate-100 shrink-0 flex items-center justify-center">
-                      <Package className="w-8 h-8 text-slate-300" />
+                      {resolveApiAssetUrl(item.imageUrl) ? (
+                        <img
+                          src={resolveApiAssetUrl(item.imageUrl)}
+                          alt={item.productName || ""}
+                          className="h-full w-full object-contain"
+                        />
+                      ) : (
+                        <Package className="w-8 h-8 text-slate-300" />
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-bold text-slate-900 truncate">

@@ -148,7 +148,7 @@ export const Header = () => {
     <>
       <header className={styles.header}>
         <Link href="/" className={styles.logo}>
-          VPH STORE
+          HĐP STORE
         </Link>
 
         <div ref={catalogMenuRef} className="flex items-center gap-2">

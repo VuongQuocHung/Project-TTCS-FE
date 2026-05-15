@@ -41,7 +41,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
           <div className="p-8 border-b border-white/10">
             <Link href="/" className="flex items-center gap-2 group">
               <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
-              <span className="text-xl font-black tracking-tighter">VPH MANAGER</span>
+              <span className="text-xl font-black tracking-tighter">HĐP MANAGER</span>
             </Link>
             {branchName && (
               <p className="text-sm text-slate-400 mt-2 font-medium">

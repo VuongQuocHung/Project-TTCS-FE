@@ -27,7 +27,7 @@ export const Footer = () => {
       <div className="max-w-[1200px] mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
           <div className="space-y-4">
-            <h3 className="text-white text-xl font-bold tracking-tighter">VPH STORE</h3>
+            <h3 className="text-white text-xl font-bold tracking-tighter">HĐP STORE</h3>
             <p className="text-sm leading-relaxed opacity-70">
               Hệ thống bán lẻ laptop uy tín hàng đầu Việt Nam. Cam kết chất lượng dịch vụ tốt nhất.
             </p>
@@ -84,7 +84,7 @@ export const Footer = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {branches.map((branch) => (
                 <div key={branch.id} className="rounded-lg border border-slate-800 bg-slate-950/40 p-5">
-                  <h5 className="text-white font-bold mb-3">{branch.name || "Chi nhánh VPH STORE"}</h5>
+                  <h5 className="text-white font-bold mb-3">{branch.name || "Chi nhánh HĐP STORE"}</h5>
                   <div className="space-y-3 text-sm">
                     <p className="flex items-start gap-3">
                       <MapPin className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
@@ -104,7 +104,7 @@ export const Footer = () => {
         </div>
 
         <div className="pt-8 border-t border-slate-800 text-center text-xs opacity-50">
-          © {new Date().getFullYear()} VPH STORE - Build by Vũ, Phúc, Hưng. All rights reserved.
+          © {new Date().getFullYear()} HĐP STORE - Build by Vũ, Phúc, Hưng. All rights reserved.
         </div>
       </div>
     </footer>
