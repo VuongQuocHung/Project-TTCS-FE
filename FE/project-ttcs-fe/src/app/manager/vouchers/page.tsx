@@ -149,7 +149,7 @@ export default function ManagerVouchersPage() {
           className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white"
         >
           <Plus className="h-5 w-5" />
-          Them voucher
+          Thêm voucher
         </button>
       </div>
 
