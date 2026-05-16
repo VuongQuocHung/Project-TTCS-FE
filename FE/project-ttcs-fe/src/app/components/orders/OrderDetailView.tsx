@@ -12,7 +12,12 @@ import {
 } from "lucide-react";
 import type { Order } from "@/types/api";
 import { resolveApiAssetUrl } from "@/lib/api";
-import { formatCurrency, getOrderStatusClasses, getOrderStatusLabel } from "@/lib/format";
+import {
+  formatCurrency,
+  getOrderStatusClasses,
+  getOrderStatusLabel,
+  getPaymentMethodLabel,
+} from "@/lib/format";
 
 type OrderDetailViewProps = {
   order: Order;
@@ -120,7 +125,7 @@ export function OrderDetailView({ order, backHref }: OrderDetailViewProps) {
               Thanh toán
             </h2>
             <p className="text-sm font-bold">
-              Phương thức: {order.paymentMethod || "COD"}
+              Phương thức: {getPaymentMethodLabel(order.paymentMethod)}
             </p>
             <p className="mt-2 text-sm font-bold">
               Trạng thái: {order.paymentStatus || "---"}

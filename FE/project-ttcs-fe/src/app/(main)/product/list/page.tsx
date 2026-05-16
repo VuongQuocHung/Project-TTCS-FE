@@ -13,7 +13,8 @@ import {
   Search as SearchIcon,
   X,
   Scale,
-  Check
+  Check,
+  ChevronDown
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import Link from "next/link";
@@ -62,8 +63,8 @@ function ProductListContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0); // Tổng số sản phẩm phù hợp với bộ lọc (không phải số sản phẩm trên trang hiện tại)
-  const [numberOfElements, setNumberOfElements] = useState(0); // Số sản phẩm thực tế trên trang hiện tại (có thể nhỏ hơn PAGE_SIZE nếu là trang cuối hoặc không có sản phẩm nào)
+  const [totalElements, setTotalElements] = useState(0);
+  const [numberOfElements, setNumberOfElements] = useState(0);
   const [compareIds, setCompareIds] = useState<number[]>([]);
   const [compareNotice, setCompareNotice] = useState<string | null>(null);
 
@@ -83,16 +84,11 @@ function ProductListContent() {
   const sortBy = searchParams.get("sortBy") || "createdAt";
   const sortDir = searchParams.get("sortDir") || "desc";
 
-  const [minPriceInput, setMinPriceInput] = useState(minPriceParam || "");
-  const [maxPriceInput, setMaxPriceInput] = useState(maxPriceParam || "");
-  const minPriceInputValue = minPriceInput.trim() ? Number(minPriceInput) : undefined;
-  const maxPriceInputValue = maxPriceInput.trim() ? Number(maxPriceInput) : undefined;
-  const priceError =
-    minPriceInputValue !== undefined &&
-    maxPriceInputValue !== undefined &&
-    minPriceInputValue > maxPriceInputValue
-      ? "Min price must be <= max price."
-      : null;
+  const MAX_PRICE_LIMIT = 200000000;
+  const [localMinPrice, setLocalMinPrice] = useState<number>(0);
+  const [localMaxPrice, setLocalMaxPrice] = useState<number>(MAX_PRICE_LIMIT);
+  const [minFocused, setMinFocused] = useState(false);
+  const [maxFocused, setMaxFocused] = useState(false);
 
   const fetchProducts = useCallback(async (showLoading = false) => {
     if (showLoading) setIsLoading(true);
@@ -119,14 +115,12 @@ function ProductListContent() {
       let content = res.content || [];
 
       if (isPriceSort) {
-        // 1. Sắp xếp toàn bộ dữ liệu (tối đa 1000 con)
         content = [...content].sort((a, b) => {
           const priceA = a.variants?.[0]?.price || 0;
           const priceB = b.variants?.[0]?.price || 0;
           return sortDir === "asc" ? priceA - priceB : priceB - priceA;
         });
         
-        // 2. Cắt mảng để phân trang thủ công ở FE
         const startIndex = currentPage * PAGE_SIZE;
         const pagedContent = content.slice(startIndex, startIndex + PAGE_SIZE);
         
@@ -165,52 +159,37 @@ function ProductListContent() {
   }, [compareIds]);
 
   useEffect(() => {
-    setMinPriceInput(minPriceParam || "");
-    setMaxPriceInput(maxPriceParam || "");
+    setLocalMinPrice(minPriceParam && !Number.isNaN(Number(minPriceParam)) ? Number(minPriceParam) : 0);
+    setLocalMaxPrice(maxPriceParam && !Number.isNaN(Number(maxPriceParam)) ? Number(maxPriceParam) : MAX_PRICE_LIMIT);
   }, [minPriceParam, maxPriceParam]);
 
-  useEffect(() => {
-    if (priceError) return;
-
-    const nextMinPriceParam = minPriceInputValue !== undefined ? String(minPriceInputValue) : null;
-    const nextMaxPriceParam = maxPriceInputValue !== undefined ? String(maxPriceInputValue) : null;
-    const currentMinPriceParam = minPriceParam || null;
-    const currentMaxPriceParam = maxPriceParam || null;
-
-    if (
-      nextMinPriceParam === currentMinPriceParam &&
-      nextMaxPriceParam === currentMaxPriceParam
-    ) {
-      return;
+  const handleApplyPrice = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (localMinPrice > 0) {
+      params.set("minPrice", String(localMinPrice));
+    } else {
+      params.delete("minPrice");
     }
+    
+    if (localMaxPrice < MAX_PRICE_LIMIT) {
+      params.set("maxPrice", String(localMaxPrice));
+    } else {
+      params.delete("maxPrice");
+    }
+    
+    params.delete("page");
+    router.push(`/product/list?${params.toString()}`);
+  };
 
-    const timeoutId = window.setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (minPriceInputValue !== undefined) {
-        params.set("minPrice", String(minPriceInputValue));
-      } else {
-        params.delete("minPrice");
-      }
-      if (maxPriceInputValue !== undefined) {
-        params.set("maxPrice", String(maxPriceInputValue));
-      } else {
-        params.delete("maxPrice");
-      }
-      params.delete("page");
-      const query = params.toString();
-      router.push(query ? `/product/list?${query}` : "/product/list");
-    }, 400);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [
-    minPriceInputValue,
-    maxPriceInputValue,
-    minPriceParam,
-    maxPriceParam,
-    priceError,
-    router,
-    searchParams
-  ]);
+  const handleClearPrice = () => {
+    setLocalMinPrice(0);
+    setLocalMaxPrice(MAX_PRICE_LIMIT);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("minPrice");
+    params.delete("maxPrice");
+    params.delete("page");
+    router.push(`/product/list?${params.toString()}`);
+  };
 
   useEffect(() => {
     const fetchMetadata = async () => {
@@ -235,7 +214,6 @@ function ProductListContent() {
     } else {
       params.delete(key);
     }
-    // Khi thay đổi filter, reset về trang 1
     params.delete("page");
     const query = params.toString();
     router.push(query ? `/product/list?${query}` : "/product/list");
@@ -279,12 +257,10 @@ function ProductListContent() {
     gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
   };
 
-
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-50 pb-20">
       <AutoRefresh intervalMs={30000} onRefresh={fetchProducts} enabled={!isLoading} />
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* HEADER */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
           <div>
             <nav className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
@@ -333,7 +309,6 @@ function ProductListContent() {
         </div>
 
         <div className="flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
-          {/* SIDEBAR FILTERS */}
           <aside className="w-full shrink-0 space-y-6 lg:w-64 xl:w-72">
             <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
               <div className="flex items-center gap-2 mb-6 text-slate-900">
@@ -341,106 +316,164 @@ function ProductListContent() {
                 <h3 className="font-black tracking-tighter">Bộ lọc tìm kiếm</h3>
               </div>
 
-              <div className="space-y-8">
-                {/* Categories */}
-                <div>
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Danh mục</p>
-                  <div className="space-y-3">
+              <div className="space-y-4">
+                <details className="group border border-slate-200 rounded-2xl p-5 bg-slate-50/50 transition-all hover:border-blue-200 hover:bg-blue-50/30 shadow-sm" open={!!categoryId}>
+                  <summary className="flex items-center justify-between cursor-pointer list-none text-xs font-black text-slate-400 uppercase tracking-widest outline-none [&::-webkit-details-marker]:hidden">
+                    Danh mục
+                    <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="space-y-3 mt-5">
                     {categories.map((c) => (
-                      <label key={c.id} className="flex items-center gap-3 cursor-pointer group">
+                      <label key={c.id} className="flex items-center gap-3 cursor-pointer group/label">
                         <input
                           type="checkbox"
                           checked={categoryId === String(c.id)}
                           onChange={(e) => updateFilter("categoryId", e.target.checked ? String(c.id) : null)}
                           className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-600 transition"
                         />
-                        <span className={`text-sm font-medium transition-colors ${categoryId === String(c.id) ? 'text-blue-600 font-bold' : 'text-slate-600 group-hover:text-blue-600'}`}>{c.name}</span>
+                        <span className={`text-sm font-medium transition-colors ${categoryId === String(c.id) ? 'text-blue-600 font-bold' : 'text-slate-600 group-hover/label:text-blue-600'}`}>{c.name}</span>
                       </label>
                     ))}
                   </div>
-                </div>
+                </details>
 
-                {/* Brands */}
-                <div>
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Thương hiệu</p>
-                  <div className="space-y-3">
+                <details className="group border border-slate-200 rounded-2xl p-5 bg-slate-50/50 transition-all hover:border-blue-200 hover:bg-blue-50/30 shadow-sm" open={!!brandId}>
+                  <summary className="flex items-center justify-between cursor-pointer list-none text-xs font-black text-slate-400 uppercase tracking-widest outline-none [&::-webkit-details-marker]:hidden">
+                    Thương hiệu
+                    <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
+                  </summary>
+                  <div className="space-y-3 mt-5">
                     {brands.map((b) => (
-                      <label key={b.id} className="flex items-center gap-3 cursor-pointer group">
+                      <label key={b.id} className="flex items-center gap-3 cursor-pointer group/label">
                         <input
                           type="checkbox"
                           checked={brandId === String(b.id)}
                           onChange={(e) => updateFilter("brandId", e.target.checked ? String(b.id) : null)}
                           className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-600 transition"
                         />
-                        <span className={`text-sm font-medium transition-colors ${brandId === String(b.id) ? 'text-blue-600 font-bold' : 'text-slate-600 group-hover:text-blue-600'}`}>{b.name}</span>
+                        <span className={`text-sm font-medium transition-colors ${brandId === String(b.id) ? 'text-blue-600 font-bold' : 'text-slate-600 group-hover/label:text-blue-600'}`}>{b.name}</span>
                       </label>
                     ))}
                   </div>
-                </div>
+                </details>
 
                 {SPEC_FILTERS.map((filter) => {
                   const selectedValue = searchParams.get(filter.key) || "";
 
                   return (
-                    <div key={filter.key}>
-                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+                    <details key={filter.key} className="group border border-slate-200 rounded-2xl p-5 bg-slate-50/50 transition-all hover:border-blue-200 hover:bg-blue-50/30 shadow-sm" open={!!selectedValue}>
+                      <summary className="flex items-center justify-between cursor-pointer list-none text-xs font-black text-slate-400 uppercase tracking-widest outline-none [&::-webkit-details-marker]:hidden">
                         {filter.label}
-                      </p>
-                      <div className="space-y-3">
+                        <ChevronDown className="w-4 h-4 text-slate-400 transition-transform group-open:rotate-180" />
+                      </summary>
+                      <div className="space-y-3 mt-5">
                         {filter.options.map((option) => (
-                          <label key={option} className="flex items-center gap-3 cursor-pointer group">
+                          <label key={option} className="flex items-center gap-3 cursor-pointer group/label">
                             <input
                               type="checkbox"
                               checked={selectedValue === option}
                               onChange={(e) => updateFilter(filter.key, e.target.checked ? option : null)}
                               className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-600 transition"
                             />
-                            <span className={`text-sm font-medium transition-colors ${selectedValue === option ? "text-blue-600 font-bold" : "text-slate-600 group-hover:text-blue-600"}`}>
+                            <span className={`text-sm font-medium transition-colors ${selectedValue === option ? "text-blue-600 font-bold" : "text-slate-600 group-hover/label:text-blue-600"}`}>
                               {option}
                             </span>
                           </label>
                         ))}
                       </div>
-                    </div>
+                    </details>
                   );
                 })}
 
-                <div>
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Khoảng giá</p>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Từ</label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={minPriceInput}
-                          onChange={(e) => setMinPriceInput(e.target.value)}
-                          placeholder="0"
-                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 focus:border-blue-600 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Đến</label>
-                        <input
-                          type="number"
-                          min={0}
-                          value={maxPriceInput}
-                          onChange={(e) => setMaxPriceInput(e.target.value)}
-                          placeholder="0"
-                          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 focus:border-blue-600 outline-none"
-                        />
-                      </div>
+                <div className="border border-slate-200 rounded-2xl p-5 bg-slate-50/50 transition-all hover:border-blue-200 hover:bg-blue-50/30 shadow-sm">
+                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-5">Khoảng giá</p>
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between gap-2">
+                      <input 
+                        type="text"
+                        value={minFocused ? (localMinPrice === 0 ? "0" : localMinPrice) : `${new Intl.NumberFormat("vi-VN").format(localMinPrice)}đ`}
+                        onFocus={() => setMinFocused(true)}
+                        onBlur={() => {
+                          setMinFocused(false);
+                          if (localMinPrice > localMaxPrice) setLocalMinPrice(localMaxPrice);
+                        }}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^\d]/g, "");
+                          setLocalMinPrice(raw ? Number(raw) : 0);
+                        }}
+                        className="flex-1 w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-center text-sm font-medium text-slate-700 outline-none focus:border-blue-600 transition"
+                      />
+                      <div className="w-2 h-[1px] bg-slate-300 shrink-0"></div>
+                      <input 
+                        type="text"
+                        value={maxFocused ? (localMaxPrice === 0 ? "0" : localMaxPrice) : `${new Intl.NumberFormat("vi-VN").format(localMaxPrice)}đ`}
+                        onFocus={() => setMaxFocused(true)}
+                        onBlur={() => {
+                          setMaxFocused(false);
+                          if (localMaxPrice < localMinPrice) setLocalMaxPrice(localMinPrice);
+                          if (localMaxPrice > MAX_PRICE_LIMIT) setLocalMaxPrice(MAX_PRICE_LIMIT);
+                        }}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/[^\d]/g, "");
+                          setLocalMaxPrice(raw ? Number(raw) : 0);
+                        }}
+                        className="flex-1 w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-center text-sm font-medium text-slate-700 outline-none focus:border-blue-600 transition"
+                      />
                     </div>
-                    {priceError && (
-                      <p className="text-xs font-bold text-red-600">{priceError}</p>
-                    )}
+
+                    <div className="relative w-full h-1.5 bg-slate-200 rounded-full my-4">
+                      <div 
+                        className="absolute h-full bg-green-500 rounded-full pointer-events-none"
+                        style={{
+                          left: `${(localMinPrice / MAX_PRICE_LIMIT) * 100}%`,
+                          right: `${100 - (localMaxPrice / MAX_PRICE_LIMIT) * 100}%`
+                        }}
+                      />
+                      <input 
+                        type="range" 
+                        min={0} 
+                        max={MAX_PRICE_LIMIT} 
+                        step={100000} 
+                        value={localMinPrice} 
+                        onChange={(e) => {
+                          const val = Math.min(Number(e.target.value), localMaxPrice - 100000);
+                          setLocalMinPrice(val);
+                        }}
+                        className="absolute top-1/2 -translate-y-1/2 w-full h-1.5 appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-green-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer z-20 [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:bg-green-500 [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:cursor-pointer"
+                      />
+                      <input 
+                        type="range" 
+                        min={0} 
+                        max={MAX_PRICE_LIMIT} 
+                        step={100000} 
+                        value={localMaxPrice} 
+                        onChange={(e) => {
+                          const val = Math.max(Number(e.target.value), localMinPrice + 100000);
+                          setLocalMaxPrice(val);
+                        }}
+                        className="absolute top-1/2 -translate-y-1/2 w-full h-1.5 appearance-none bg-transparent pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:bg-green-500 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer z-20 [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:bg-green-500 [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:cursor-pointer"
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2">
+                      <button 
+                        onClick={handleClearPrice}
+                        className="flex-1 bg-white text-red-500 border border-red-500 rounded-lg py-2 text-sm font-medium hover:bg-red-50 transition"
+                      >
+                        Bỏ chọn
+                      </button>
+                      <button 
+                        onClick={handleApplyPrice}
+                        className="flex-1 bg-blue-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-600 transition"
+                      >
+                        Xem kết quả
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Promo Banner */}
             <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl p-6 text-white shadow-xl shadow-blue-100 relative overflow-hidden">
               <div className="relative z-10">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 opacity-80">Ưu đãi tháng 4</p>
@@ -451,7 +484,6 @@ function ProductListContent() {
             </div>
           </aside>
 
-          {/* PRODUCT LIST */}
           <main className="min-w-0 flex-1">
             {error ? (
               <div className="bg-red-50 border border-red-100 p-8 rounded-3xl text-center">

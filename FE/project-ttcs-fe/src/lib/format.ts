@@ -1,4 +1,4 @@
-import type { DiscountType, OrderStatus, Product, ProductVariant, Voucher, VoucherStatus } from "@/types/api";
+import type { DiscountType, OrderStatus, PaymentMethod, Product, ProductVariant, Voucher, VoucherStatus } from "@/types/api";
 import { resolveApiAssetUrl } from "@/lib/api";
 
 export function formatCurrency(value?: number) {
@@ -12,8 +12,12 @@ export function getPrimaryVariant(product?: Product | null): ProductVariant | un
   return product?.variants?.[0];
 }
 
+type ProductWithRootImages = Product & {
+  images?: string | Array<string | { imageUrl?: string }>;
+};
+
 export function getPrimaryImage(product?: Product | null) {
-  const images = (product as any)?.images;
+  const images = (product as ProductWithRootImages | null | undefined)?.images;
   if (typeof images === "string") {
     return resolveApiAssetUrl(images) || "/assets/images/loq.jpg";
   }
@@ -81,6 +85,23 @@ export function getOrderStatusClasses(status?: OrderStatus | string) {
       return "bg-slate-100 text-slate-700 border-slate-200";
     default:
       return "bg-slate-50 text-slate-600 border-slate-200";
+  }
+}
+
+export function getPaymentMethodLabel(method?: PaymentMethod | string | null) {
+  switch (method) {
+    case "COD":
+      return "Thanh toán khi nhận hàng (COD)";
+    case "VNPAY":
+      return "VNPay";
+    case "MOMO":
+      return "MoMo";
+    case "ZALOPAY":
+      return "ZaloPay";
+    case "STRIPE":
+      return "Stripe";
+    default:
+      return "Không xác định";
   }
 }
 

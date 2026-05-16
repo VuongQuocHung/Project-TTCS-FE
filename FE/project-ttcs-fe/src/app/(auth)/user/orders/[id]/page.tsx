@@ -9,16 +9,29 @@ import {
   Calendar,
   CircleDollarSign,
   Clock,
+  CreditCard,
   Package,
+  RefreshCw,
   ShoppingBag,
   Truck,
   XCircle,
 } from "lucide-react";
-import { orderApi } from "@/lib/api-endpoints";
+import { orderApi, paymentApi } from "@/lib/api-endpoints";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import type { Order } from "@/types/api";
+import type { Order, PaymentMethod } from "@/types/api";
 import { resolveApiAssetUrl, type ApiError } from "@/lib/api";
-import { formatCurrency, getOrderStatusClasses, getOrderStatusLabel } from "@/lib/format";
+import {
+  formatCurrency,
+  getOrderStatusClasses,
+  getOrderStatusLabel,
+  getPaymentMethodLabel,
+} from "@/lib/format";
+
+const onlinePaymentMethods: PaymentMethod[] = ["VNPAY", "ZALOPAY", "MOMO"];
+
+function isOnlinePaymentMethod(method?: string): method is PaymentMethod {
+  return onlinePaymentMethods.includes(method as PaymentMethod);
+}
 
 function OrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +40,8 @@ function OrderDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [activePaymentMethod, setActivePaymentMethod] = useState<PaymentMethod | null>(null);
+  const [isChoosingPaymentMethod, setIsChoosingPaymentMethod] = useState(false);
 
   const fetchOrder = async () => {
     if (!id) return;
@@ -63,6 +78,28 @@ function OrderDetail() {
     }
   };
 
+  const handlePay = async (method: PaymentMethod) => {
+    if (!order?.id) return;
+
+    try {
+      setActivePaymentMethod(method);
+      setError(null);
+      const payment = await paymentApi.createPaymentUrl(order.id, method);
+
+      if (!payment.paymentUrl) {
+        setError(payment.message || "Không lấy được đường dẫn thanh toán.");
+        return;
+      }
+
+      window.location.href = payment.paymentUrl;
+    } catch (err) {
+      const apiError = err as ApiError;
+      setError(apiError?.message || "Không thể mở cổng thanh toán.");
+    } finally {
+      setActivePaymentMethod(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center bg-slate-50">
@@ -95,6 +132,17 @@ function OrderDetail() {
       </div>
     );
   }
+
+  const currentPaymentMethod = isOnlinePaymentMethod(order.paymentMethod)
+    ? order.paymentMethod
+    : null;
+  const canRetryOnlinePayment =
+    order.status === "PENDING" &&
+    currentPaymentMethod !== null &&
+    order.paymentStatus !== "SUCCESS";
+  const alternativePaymentMethods = onlinePaymentMethods.filter(
+    (method) => method !== currentPaymentMethod
+  );
 
   return (
     <div className="bg-slate-50 min-h-screen py-12">
@@ -254,39 +302,96 @@ function OrderDetail() {
               </div>
             </div>
 
-            <div className="bg-slate-900 p-8 rounded-3xl text-white shadow-xl shadow-slate-200">
-              <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">
-                Thanh toán
-              </h3>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                  <CircleDollarSign className="w-6 h-6 text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
-                    Phương thức
-                  </p>
-                  <p className="text-sm font-black">Thanh toán khi nhận hàng (COD)</p>
+            <div className="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm flex flex-col gap-6">
+              <div>
+                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-6">
+                  Thanh toán
+                </h3>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
+                    <CircleDollarSign className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
+                      Phương thức
+                    </p>
+                    <p className="text-sm font-black text-slate-900">
+                      {getPaymentMethodLabel(order.paymentMethod)}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {order.status === "PENDING" ? (
-                <button
-                  type="button"
-                  onClick={handleCancelOrder}
-                  disabled={isCancelling}
-                  className="w-full mt-8 bg-red-500 text-white py-4 rounded-2xl font-black hover:bg-red-600 transition disabled:opacity-70"
-                >
-                  {isCancelling ? "Đang hủy..." : "Hủy đơn hàng"}
-                </button>
+              {canRetryOnlinePayment ? (
+                <div className="space-y-3 pt-6 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => handlePay(currentPaymentMethod)}
+                    disabled={activePaymentMethod !== null}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 text-white py-3.5 rounded-2xl font-black hover:bg-blue-700 transition disabled:opacity-70 shadow-sm shadow-blue-200 active:scale-[0.98]"
+                  >
+                    <RefreshCw
+                      className={`w-5 h-5 shrink-0 ${
+                        activePaymentMethod === currentPaymentMethod ? "animate-spin" : ""
+                      }`}
+                    />
+                    <span>
+                      {activePaymentMethod === currentPaymentMethod
+                        ? "Đang mở cổng..."
+                        : "Thanh toán lại"}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsChoosingPaymentMethod((value) => !value)}
+                    disabled={activePaymentMethod !== null}
+                    className="w-full inline-flex items-center justify-center gap-2 bg-slate-50 text-slate-700 border border-slate-200 py-3.5 rounded-2xl font-black hover:bg-slate-100 transition disabled:opacity-70 active:scale-[0.98]"
+                  >
+                    <CreditCard className="w-5 h-5 shrink-0" />
+                    <span>Đổi phương thức khác</span>
+                  </button>
+
+                  {isChoosingPaymentMethod ? (
+                    <div className="grid grid-cols-1 gap-2 rounded-2xl bg-slate-50 p-3 border border-slate-100 mt-2">
+                      {alternativePaymentMethods.map((method) => (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => handlePay(method)}
+                          disabled={activePaymentMethod !== null}
+                          className="flex items-center justify-between rounded-xl bg-white border border-slate-200 px-4 py-3 text-left font-black text-slate-700 hover:border-blue-300 hover:text-blue-600 transition disabled:opacity-70 active:scale-[0.98]"
+                        >
+                          <span>{getPaymentMethodLabel(method)}</span>
+                          <span className="text-xs text-blue-600 font-bold">
+                            {activePaymentMethod === method ? "ĐANG MỞ..." : "CHỌN"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               ) : null}
 
-              <Link
-                href="/user/orders"
-                className="w-full mt-4 inline-flex items-center justify-center bg-white/10 text-white py-4 rounded-2xl font-black hover:bg-white/20 transition"
-              >
-                Quay lại danh sách
-              </Link>
+              <div className="pt-6 border-t border-slate-100 space-y-3 mt-auto">
+                {order.status === "PENDING" ? (
+                  <button
+                    type="button"
+                    onClick={handleCancelOrder}
+                    disabled={isCancelling}
+                    className="w-full bg-red-50 text-red-600 border border-red-100 py-3.5 rounded-2xl font-black hover:bg-red-100 transition disabled:opacity-70 active:scale-[0.98]"
+                  >
+                    {isCancelling ? "Đang hủy..." : "Hủy đơn hàng"}
+                  </button>
+                ) : null}
+
+                <Link
+                  href="/user/orders"
+                  className="w-full inline-flex items-center justify-center bg-white text-slate-600 border border-slate-200 py-3.5 rounded-2xl font-black hover:bg-slate-50 transition active:scale-[0.98]"
+                >
+                  Quay lại danh sách
+                </Link>
+              </div>
             </div>
           </div>
         </div>

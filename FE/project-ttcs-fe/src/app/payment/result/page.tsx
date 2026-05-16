@@ -46,6 +46,8 @@ export default async function PaymentResultPage({
 }) {
   const params = (await searchParams) || {};
   const result = getPaymentResult(params);
+  const orderId = readParam(params, "orderId");
+  const orderHref = orderId ? `/user/orders/${orderId}` : "/user/orders";
   const Icon = result.icon;
 
   return (
@@ -62,7 +64,7 @@ export default async function PaymentResultPage({
         <p className="text-slate-500 mt-3 leading-relaxed">{result.message}</p>
         <div className="flex flex-col sm:flex-row justify-center gap-3 mt-8">
           <Link
-            href="/user/orders"
+            href={orderHref}
             className="px-6 py-3 rounded-2xl bg-blue-600 text-white font-black hover:bg-slate-900 transition"
           >
             Xem đơn hàng
